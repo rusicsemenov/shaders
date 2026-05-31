@@ -7,7 +7,7 @@ const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setAnimationLoop(animate);
-document.body.appendChild(renderer.domElement);
+document.querySelector('#app')?.appendChild(renderer.domElement);
 
 const geometry = new THREE.PlaneGeometry(2, 2, 200, 200);
 

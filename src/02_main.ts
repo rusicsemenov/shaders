@@ -7,7 +7,7 @@ const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerH
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setAnimationLoop(animate);
-document.body.appendChild(renderer.domElement);
+document.querySelector('#app')?.appendChild(renderer.domElement);
 
 const geometry = new THREE.PlaneGeometry(20, 20, 200, 200);
 
@@ -82,18 +82,15 @@ const material = new THREE.ShaderMaterial({
     side: THREE.DoubleSide,
 });
 
-const defaultMaterial = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
-
 const plane = new THREE.Mesh(geometry, material);
-// const plane = new THREE.Mesh(geometry, defaultMaterial);
 scene.add(plane);
 
 camera.position.z = 20;
 plane.rotation.x = -Math.PI / 5;
 
 function animate(time: number) {
-    // plane.rotation.x = time / 6000;
-    // plane.rotation.y = time / 2000;
+    plane.rotation.x = time / 6000;
+    plane.rotation.y = time / 2000;
 
     uniforms.iTime.value = time / 1000;
 
