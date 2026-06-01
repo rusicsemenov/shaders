@@ -6,6 +6,7 @@ interface ShaderCanvasOptions {
     fragmentShader: string;
     vertexShader?: string;
     uniforms?: Record<string, UniformValue>;
+    particles?: Float32Array;
 }
 
 const DEFAULT_VERTEX_SHADER = `
@@ -16,14 +17,14 @@ const DEFAULT_VERTEX_SHADER = `
 `;
 
 class ShaderCanvas {
-    private canvas: HTMLCanvasElement;
-    private gl: WebGLRenderingContext;
-    private program: WebGLProgram;
-    private uniformLocations = new Map<string, WebGLUniformLocation | null>();
-    private userUniforms: ShaderCanvasOptions['uniforms'];
+    private readonly canvas: HTMLCanvasElement;
+    private readonly gl: WebGLRenderingContext;
+    private readonly program: WebGLProgram;
+    private readonly uniformLocations = new Map<string, WebGLUniformLocation | null>();
+    private readonly userUniforms: ShaderCanvasOptions['uniforms'];
     private rafId = 0;
-    private startTime = performance.now();
-    private observer: ResizeObserver;
+    private readonly startTime = performance.now();
+    private readonly observer: ResizeObserver;
 
     constructor(container: string | HTMLElement, options: ShaderCanvasOptions) {
         // --- Resolve container ---
@@ -32,7 +33,7 @@ class ShaderCanvas {
                 ? document.querySelector<HTMLElement>(container)
                 : container;
 
-        if (!el) throw new Error(`ShaderCanvas: container not found — "${container}"`);
+        if (!el) throw new Error(`ShaderCanvas: container not found — "${container.toString()}"`);
 
         // --- Create canvas ---
         this.canvas = document.createElement('canvas');
@@ -45,6 +46,9 @@ class ShaderCanvas {
         const gl = this.canvas.getContext('webgl');
         if (!gl) throw new Error('ShaderCanvas: WebGL not supported in this browser');
         this.gl = gl;
+
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
         this.userUniforms = options.uniforms;
 
@@ -60,13 +64,17 @@ class ShaderCanvas {
         //      │  ╲       │
         //   (-1,-1) ── (1,-1)
         const quad = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
+        const data = options.particles ?? quad;
+
         const buf = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-        gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW);
+        gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
 
         const posLoc = gl.getAttribLocation(this.program, 'position');
         gl.enableVertexAttribArray(posLoc);
-        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+        const size = options.particles ? 3 : 2;
+        gl.vertexAttribPointer(posLoc, size, gl.FLOAT, false, 0, 0);
 
         // --- Cache uniform locations ---
         this.cacheUniform('iTime');
@@ -83,7 +91,7 @@ class ShaderCanvas {
         this.resize();
 
         // --- Start animation loop ---
-        this.tick();
+        this.tick(options.particles);
     }
 
     // ─── Private helpers ───────────────────────────────────────────────────
@@ -152,14 +160,20 @@ class ShaderCanvas {
             gl.uniform1f(loc, value);
         } else {
             switch (value.length) {
-                case 2: gl.uniform2f(loc, value[0], value[1]); break;
-                case 3: gl.uniform3f(loc, value[0], value[1], value[2]); break;
-                case 4: gl.uniform4f(loc, value[0], value[1], value[2], value[3]); break;
+                case 2:
+                    gl.uniform2f(loc, value[0], value[1]);
+                    break;
+                case 3:
+                    gl.uniform3f(loc, value[0], value[1], value[2]);
+                    break;
+                case 4:
+                    gl.uniform4f(loc, value[0], value[1], value[2], value[3]);
+                    break;
             }
         }
     }
 
-    private tick = (): void => {
+    private tick = (particles: Float32Array | undefined): void => {
         const { canvas } = this;
         const t = (performance.now() - this.startTime) / 1000;
 
@@ -172,8 +186,12 @@ class ShaderCanvas {
             }
         }
 
-        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
-        this.rafId = requestAnimationFrame(this.tick);
+        if (particles) {
+            this.gl.drawArrays(this.gl.POINTS, 0, particles.length / 3);
+        } else {
+            this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+        }
+        this.rafId = requestAnimationFrame(() => this.tick(particles));
     };
 
     // ─── Public API ────────────────────────────────────────────────────────
