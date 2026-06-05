@@ -19,7 +19,7 @@ const vertexShader = `
         float t = -iTime * 0.05;
         
         float rnd = hash(position.x * 127.1 + position.z * 311.7);
-        float wave = sin(iTime + rnd * 5.28) * 0.05; 
+        float wave = sin(iTime + rnd * 5.28) * 0.01; 
         
         float newX = position.x * cos(t) + position.z * sin(t);
         float newZ = -position.x * sin(t) + position.z * cos(t);
@@ -49,7 +49,7 @@ const fragmentShader = `
         float alpha = smoothstep(0.5, 0.3, dist);
 
         float brightness = 1.0 - vDepth * 0.5; 
-        vec3 finalColor = vec3(brightness);
+        vec3 finalColor = vec3(0.031, 0.580, 1.0) * brightness;
 
         if (dist > 0.5) discard;
         gl_FragColor = vec4(finalColor, alpha);
