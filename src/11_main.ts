@@ -3,6 +3,7 @@ import { ShaderCanvas } from './ShaderCanvas';
 
 const vertexShader = `
     attribute vec3 position;
+    attribute float a_type; // 0.0 = шар, 1.0 = плоскость
     varying float vDepth;
     varying float vType;
     varying float vAlpha;
@@ -32,7 +33,7 @@ const vertexShader = `
         float aspectX = max(iResolution.x / iResolution.y, 1.0);
         float aspectY = max(iResolution.y / iResolution.x, 1.0);
 
-        float isPlane = 1.0 - step(-0.35, position.y);
+        float isPlane = a_type;
         vType = 1.0 - isPlane;
 
         vec3 pos = position;
@@ -59,7 +60,13 @@ const vertexShader = `
         float cameraZ = 2.0;
         float perspW  = (cameraZ - position.z) / cameraZ;
 
-        float nearness = (position.z + 0.9) / 1.8;
+        float nearnessZ = (position.z + 1.9) / 1.8;       // 0 = дальний край, 1 = ближний
+        float nearnessX = 1.0 - abs(position.x) / 2.2;    // 0 = боковые края, 1 = центр
+        float nearnessY = 1.0 - abs(position.y) / 1.3;    // 0 = боковые края, 1 = центр
+        float nearnessR = 1.0 - length(position.xz) / 1.4; 
+        // float nearness  = nearnessZ * nearnessR * 1.3;
+        float nearness  = nearnessZ;
+
         vAlpha = mix(1.0, nearness * nearness, isPlane);
 
         float sphereSize = 2.5 * (1.2 - finalZ * 0.4);
@@ -85,7 +92,7 @@ const fragmentShader = `
         float brightness = 1.0 - vDepth * 0.4;
 
         vec3 sphereColor = vec3(0.2, 0.6, 1.0) * brightness;
-        vec3 planeColor  = vec3(0.3, 0.9, 0.5) * brightness * 0.6;
+        vec3 planeColor  = vec3(0.3, 0.9, 0.5) * brightness * 1.6;
 
         vec3 col = mix(planeColor, sphereColor, vType);
         gl_FragColor = vec4(col, alpha * vAlpha);
@@ -94,31 +101,31 @@ const fragmentShader = `
 
 // ─── Sphere (golden ratio distribution) ──────────────────────────────────────
 
-const sphereCount   = 5000;
-const sphereR       = 0.5;
+const sphereCount = 1000;
+const sphereR = 0.5;
 const sphereCenterY = 0.2;
-const sphere        = new Float32Array(sphereCount * 3);
+const sphere = new Float32Array(sphereCount * 3);
 
 for (let i = 0; i < sphereCount; i++) {
-    const phi   = Math.acos(1 - (2 * i) / sphereCount);
+    const phi = Math.acos(1 - (2 * i) / sphereCount);
     const theta = Math.PI * (1 + Math.sqrt(5)) * i;
-    sphere[i * 3]     = sphereR * Math.sin(phi) * Math.cos(theta);
+    sphere[i * 3] = sphereR * Math.sin(phi) * Math.cos(theta);
     sphere[i * 3 + 1] = sphereR * Math.sin(phi) * Math.sin(theta) + sphereCenterY;
     sphere[i * 3 + 2] = sphereR * Math.cos(phi);
 }
 
 // ─── Plane (regular grid) ─────────────────────────────────────────────────────
 
-const gridSize    = 60; // 60x60 = 3600 точек
-const planeY      = -0.4;
-const planeExtent = 0.9;
-const plane       = new Float32Array(gridSize * gridSize * 3);
+const gridSize = 120; // 60x60 = 3600 точек
+const planeY = -0.2;
+const planeExtent = 1.9;
+const plane = new Float32Array(gridSize * gridSize * 3);
 
 for (let row = 0; row < gridSize; row++) {
     for (let col = 0; col < gridSize; col++) {
-        const idx      = (row * gridSize + col) * 3;
-        plane[idx]     = (col / (gridSize - 1)) * 2 * planeExtent - planeExtent;
-        plane[idx + 1] = planeY;
+        const idx = (row * gridSize + col) * 3;
+        plane[idx] = (col / (gridSize - 1)) * 3 * planeExtent - planeExtent * 1.5;
+        plane[idx + 1] = planeY - (row / gridSize) * 0.8; // slight vertical offset to prevent z-fighting
         plane[idx + 2] = (row / (gridSize - 1)) * 2 * planeExtent - planeExtent;
     }
 }
@@ -129,4 +136,14 @@ const particles = new Float32Array(sphere.length + plane.length);
 particles.set(sphere, 0);
 particles.set(plane, sphere.length);
 
-new ShaderCanvas('#app', { fragmentShader, vertexShader, particles });
+// 0.0 = шар, 1.0 = плоскость — по одному float на каждую точку
+const types = new Float32Array(sphereCount + gridSize * gridSize);
+types.fill(0, 0, sphereCount);
+types.fill(1, sphereCount);
+
+new ShaderCanvas('#app', {
+    fragmentShader,
+    vertexShader,
+    particles,
+    attributes: { a_type: { data: types, size: 1 } },
+});

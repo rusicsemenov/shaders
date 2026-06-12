@@ -8,6 +8,7 @@ interface ShaderCanvasOptions {
     uniforms?: Record<string, UniformValue>;
     textures?: Record<string, string>;
     particles?: Float32Array;
+    attributes?: Record<string, { data: Float32Array; size: number }>;
 }
 
 const DEFAULT_VERTEX_SHADER = `
@@ -80,6 +81,18 @@ class ShaderCanvas {
 
         const size = options.particles ? 3 : 2;
         gl.vertexAttribPointer(posLoc, size, gl.FLOAT, false, 0, 0);
+
+        // --- Extra vertex attributes ---
+        if (options.attributes) {
+            for (const [name, { data, size: attrSize }] of Object.entries(options.attributes)) {
+                const attrBuf = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, attrBuf);
+                gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+                const loc = gl.getAttribLocation(this.program, name);
+                gl.enableVertexAttribArray(loc);
+                gl.vertexAttribPointer(loc, attrSize, gl.FLOAT, false, 0, 0);
+            }
+        }
 
         // --- Cache uniform locations ---
         this.cacheUniform('iTime');
