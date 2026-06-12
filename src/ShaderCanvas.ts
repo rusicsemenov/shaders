@@ -6,6 +6,7 @@ interface ShaderCanvasOptions {
     fragmentShader: string;
     vertexShader?: string;
     uniforms?: Record<string, UniformValue>;
+    textures?: Record<string, string>;
     particles?: Float32Array;
 }
 
@@ -22,6 +23,10 @@ class ShaderCanvas {
     private readonly program: WebGLProgram;
     private readonly uniformLocations = new Map<string, WebGLUniformLocation | null>();
     private readonly userUniforms: ShaderCanvasOptions['uniforms'];
+    private readonly loadedTextures = new Map<
+        string,
+        { texture: WebGLTexture; unit: number; width: number; height: number }
+    >();
     private rafId = 0;
     private readonly startTime = performance.now();
     private readonly observer: ResizeObserver;
@@ -84,6 +89,14 @@ class ShaderCanvas {
                 this.cacheUniform(name);
             }
         }
+        if (options.textures) {
+            let unit = 0;
+            for (const [name, url] of Object.entries(options.textures)) {
+                this.cacheUniform(name);
+                this.cacheUniform(name + 'Size');
+                this.loadTexture(name, url, unit++);
+            }
+        }
 
         // --- Resize observer (reacts to container resizes) ---
         this.observer = new ResizeObserver(() => this.resize());
@@ -95,6 +108,28 @@ class ShaderCanvas {
     }
 
     // ─── Private helpers ───────────────────────────────────────────────────
+
+    private loadTexture(name: string, url: string, unit: number): void {
+        const gl = this.gl;
+        const img = new Image();
+        img.src = url;
+        img.onload = () => {
+            const texture = gl.createTexture()!;
+            gl.activeTexture(gl.TEXTURE0 + unit);
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            this.loadedTextures.set(name, {
+                texture,
+                unit,
+                width: img.naturalWidth,
+                height: img.naturalHeight,
+            });
+        };
+    }
 
     private cacheUniform(name: string): void {
         this.uniformLocations.set(name, this.gl.getUniformLocation(this.program, name));
@@ -184,6 +219,16 @@ class ShaderCanvas {
             for (const [name, { value }] of Object.entries(this.userUniforms)) {
                 this.setUniform(name, value);
             }
+        }
+
+        for (const [name, { texture, unit, width, height }] of this.loadedTextures) {
+            const gl = this.gl;
+            const loc = this.uniformLocations.get(name) ?? null;
+            if (loc === null) continue;
+            gl.activeTexture(gl.TEXTURE0 + unit);
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.uniform1i(loc, unit);
+            this.setUniform(name + 'Size', [width, height]);
         }
 
         if (particles) {
