@@ -40,13 +40,13 @@ const vertexShader = `
 
         // ── шум шара: смещает точки вдоль нормали ─────────────────────────
         vec3  sNorm  = normalize(position - vec3(0.0, 0.2, 0.0));
-        float sNoise = noise(position * 4.0 + iTime * 0.4) * 0.12;
+        float sNoise = noise(position * 8.0 + iTime * 0.4) * 0.2;
         pos += sNorm * sNoise * (1.0 - isPlane);
         // ── закомментируй три строки выше чтобы отключить шум шара ────────
 
         // ── шум плоскости: волны по Y ──────────────────────────────────────
-        float pNoise = noise(vec3(position.xz * 3.0, iTime * 0.5)) * 0.06;
-        pos.y += pNoise * isPlane;
+        float pNoise = noise(vec3(position.xz * 3.0, iTime * 0.01)) * 0.1;
+        pos.y += sin(pos.x * 3.0 + iTime * 1.5) * isPlane * pNoise;  
         // ── закомментируй две строки выше чтобы отключить шум плоскости ───
 
         float t = iTime * 0.3;
@@ -60,12 +60,11 @@ const vertexShader = `
         float cameraZ = 2.0;
         float perspW  = (cameraZ - position.z) / cameraZ;
 
-        float nearnessZ = (position.z + 1.9) / 1.8;       // 0 = дальний край, 1 = ближний
-        float nearnessX = 1.0 - abs(position.x) / 2.2;    // 0 = боковые края, 1 = центр
+        float nearnessZ = (1.5 - sin(position.z * 2.0)) / 2.0;       // 0 = дальний край, 1 = ближний
+        float nearnessX = 1.0 - abs(position.x) / 5.2;    // 0 = боковые края, 1 = центр
         float nearnessY = 1.0 - abs(position.y) / 1.3;    // 0 = боковые края, 1 = центр
         float nearnessR = 1.0 - length(position.xz) / 1.4; 
-        // float nearness  = nearnessZ * nearnessR * 1.3;
-        float nearness  = nearnessZ;
+        float nearness = nearnessZ * nearnessX;
 
         vAlpha = mix(1.0, nearness * nearness, isPlane);
 
@@ -87,12 +86,12 @@ const fragmentShader = `
     void main() {
         float dist = distance(gl_PointCoord, vec2(0.5));
         if (dist > 0.5) discard;
-        float alpha = smoothstep(0.5, 0.2, dist);
+        float alpha = smoothstep(0.8, 0.1, dist);
 
-        float brightness = 1.0 - vDepth * 0.4;
+        float brightness = 0.5 - vDepth * 0.4;
 
-        vec3 sphereColor = vec3(0.2, 0.6, 1.0) * brightness;
-        vec3 planeColor  = vec3(0.3, 0.9, 0.5) * brightness * 1.6;
+        vec3 sphereColor = vec3(0.2, 0.6, 1.0) * brightness * 1.2;
+        vec3 planeColor  = vec3(0.3, 0.6, 1.0) * brightness;
 
         vec3 col = mix(planeColor, sphereColor, vType);
         gl_FragColor = vec4(col, alpha * vAlpha);
@@ -101,8 +100,8 @@ const fragmentShader = `
 
 // ─── Sphere (golden ratio distribution) ──────────────────────────────────────
 
-const sphereCount = 1000;
-const sphereR = 0.5;
+const sphereCount = 3000;
+const sphereR = 0.3;
 const sphereCenterY = 0.2;
 const sphere = new Float32Array(sphereCount * 3);
 
@@ -116,8 +115,8 @@ for (let i = 0; i < sphereCount; i++) {
 
 // ─── Plane (regular grid) ─────────────────────────────────────────────────────
 
-const gridSize = 120; // 60x60 = 3600 точек
-const planeY = -0.2;
+const gridSize = 100; // 60x60 = 3600 точек
+const planeY = -0.5;
 const planeExtent = 1.9;
 const plane = new Float32Array(gridSize * gridSize * 3);
 
