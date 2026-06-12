@@ -1,11 +1,11 @@
 import './style.css';
 import { ShaderCanvas } from './ShaderCanvas';
 
-// Адаптированный шейдер из 03_main.ts
-// Изменения:
-//   - убран `#include <common>` (не нужен без Three.js)
-//   - palette() + mainImage() объединены в один void main()
-//   - gl_FragCoord используется напрямую (встроенная переменная WebGL)
+// Adapted shader from 03_main.ts
+// Changes:
+//   - removed `#include <common>` (not needed without Three.js)
+//   - palette() + mainImage() merged into a single void main()
+//   - gl_FragCoord used directly (built-in WebGL variable)
 
 const fragmentShader = `
     precision highp float;

@@ -61,7 +61,7 @@ const fragmentShader = `
       float ambient = 0.2;
       float light = ambient + diffuse;
   
-      vec3 baseColor = vec3(0.2, 0.5, 1.0); // синий
+      vec3 baseColor = vec3(0.2, 0.5, 1.0); // blue
       gl_FragColor = vec4(baseColor * light, 1.0);
 
 //      mainImage(gl_FragColor, gl_FragCoord.xy);

@@ -71,8 +71,8 @@ const R = 0.6;
 const getDistortion = () => (Math.random() - 0.5) * noiseSize;
 
 for (let i = 0; i < particles.length; i += 3) {
-    const phi = Math.acos(1 - (2 * i) / pointsCount); // по расстоянию от полюса
-    const theta = Math.PI * (1 + Math.sqrt(5)) * i; // золотое сечение
+    const phi = Math.acos(1 - (2 * i) / pointsCount); // polar angle, uniform distribution
+    const theta = Math.PI * (1 + Math.sqrt(5)) * i; // golden ratio
 
     particles[i] = R * Math.sin(phi) * Math.cos(theta) + getDistortion(); // x
     particles[i + 1] = R * Math.sin(phi) * Math.sin(theta) + getDistortion(); // y

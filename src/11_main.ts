@@ -3,7 +3,7 @@ import { ShaderCanvas } from './ShaderCanvas';
 
 const vertexShader = `
     attribute vec3 position;
-    attribute float a_type; // 0.0 = шар, 1.0 = плоскость
+    attribute float a_type; // 0.0 = sphere, 1.0 = plane
     varying float vDepth;
     varying float vType;
     varying float vAlpha;
@@ -38,16 +38,16 @@ const vertexShader = `
 
         vec3 pos = position;
 
-        // ── шум шара: смещает точки вдоль нормали ─────────────────────────
+        // ── sphere noise: displaces points along the normal ───────────────
         vec3  sNorm  = normalize(position - vec3(0.0, 0.2, 0.0));
         float sNoise = noise(position * 8.0 + iTime * 0.4) * 0.2;
         pos += sNorm * sNoise * (1.0 - isPlane);
-        // ── закомментируй три строки выше чтобы отключить шум шара ────────
+        // ── comment out the three lines above to disable sphere noise ──────
 
-        // ── шум плоскости: волны по Y ──────────────────────────────────────
+        // ── plane noise: waves along Y ────────────────────────────────────
         float pNoise = noise(vec3(position.xz * 3.0, iTime * 0.01)) * 0.1;
-        pos.y += sin(pos.x * 3.0 + iTime * 1.5) * isPlane * pNoise;  
-        // ── закомментируй две строки выше чтобы отключить шум плоскости ───
+        pos.y += sin(pos.x * 3.0 + iTime * 1.5) * isPlane * pNoise;
+        // ── comment out the two lines above to disable plane noise ─────────
 
         float t = iTime * 0.3;
         float rotX = pos.x * cos(t) + pos.z * sin(t);
@@ -60,9 +60,9 @@ const vertexShader = `
         float cameraZ = 2.0;
         float perspW  = (cameraZ - position.z) / cameraZ;
 
-        float nearnessZ = (1.5 - sin(position.z * 2.0)) / 2.0;       // 0 = дальний край, 1 = ближний
-        float nearnessX = 1.0 - abs(position.x) / 5.2;    // 0 = боковые края, 1 = центр
-        float nearnessY = 1.0 - abs(position.y) / 1.3;    // 0 = боковые края, 1 = центр
+        float nearnessZ = (1.5 - sin(position.z * 2.0)) / 2.0;       // 0 = far edge, 1 = near edge
+        float nearnessX = 1.0 - abs(position.x) / 5.2;    // 0 = side edges, 1 = center
+        float nearnessY = 1.0 - abs(position.y) / 1.3;    // 0 = side edges, 1 = center
         float nearnessR = 1.0 - length(position.xz) / 1.4; 
         float nearness = nearnessZ * nearnessX;
 
@@ -115,7 +115,7 @@ for (let i = 0; i < sphereCount; i++) {
 
 // ─── Plane (regular grid) ─────────────────────────────────────────────────────
 
-const gridSize = 100; // 60x60 = 3600 точек
+const gridSize = 100; // 100x100 = 10000 points
 const planeY = -0.5;
 const planeExtent = 1.9;
 const plane = new Float32Array(gridSize * gridSize * 3);
@@ -135,14 +135,18 @@ const particles = new Float32Array(sphere.length + plane.length);
 particles.set(sphere, 0);
 particles.set(plane, sphere.length);
 
-// 0.0 = шар, 1.0 = плоскость — по одному float на каждую точку
+// 0.0 = sphere, 1.0 = plane — one float per point
 const types = new Float32Array(sphereCount + gridSize * gridSize);
 types.fill(0, 0, sphereCount);
 types.fill(1, sphereCount);
 
-new ShaderCanvas('#app', {
-    fragmentShader,
-    vertexShader,
-    particles,
-    attributes: { a_type: { data: types, size: 1 } },
-});
+try {
+    new ShaderCanvas('#app', {
+        fragmentShader,
+        vertexShader,
+        particles,
+        attributes: { a_type: { data: types, size: 1 } },
+    });
+} catch (_error) {
+    console.log('WebGL не поддерживается в этом браузере', _error);
+}

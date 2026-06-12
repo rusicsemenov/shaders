@@ -42,7 +42,7 @@ const fragmentShader = `
     }
 
     // ─── Normal ──────────────────────────────────────────────────────────────
-    // gradient of SDF = направление "наружу" от поверхности
+    // gradient of SDF = outward direction from the surface
 
     vec3 calcNormal(vec3 p) {
         vec2 e = vec2(0.001, 0.0);
@@ -56,10 +56,10 @@ const fragmentShader = `
     // ─── Main ────────────────────────────────────────────────────────────────
 
     void main() {
-        // uv центрированы по Y, чтобы пропорции не зависели от размера экрана
+        // uv centered on Y so proportions are independent of screen size
         vec2 uv = (gl_FragCoord.xy - 0.5 * iResolution.xy) / iResolution.y;
 
-        // камера
+        // camera
         vec3 ro = vec3(0.0, 1.5, 3.0);
         vec3 rd = normalize(vec3(uv, -1.0));
 
@@ -67,7 +67,7 @@ const fragmentShader = `
         float t     = hit.x;
         float matId = hit.y;
 
-        vec3 col = vec3(0.08, 0.08, 0.12); // фон
+        vec3 col = vec3(0.08, 0.08, 0.12); // background
 
         if (t > 0.0) {
             vec3 p = ro + rd * t;
@@ -77,8 +77,8 @@ const fragmentShader = `
             float diff = max(dot(n, lightDir), 0.0);
 
             vec3 baseColor = matId < 1.5
-                ? vec3(0.2, 0.5, 0.9)  // шар — синий
-                : vec3(0.4, 0.4, 0.4); // плоскость — серая
+                ? vec3(0.2, 0.5, 0.9)  // sphere — blue
+                : vec3(0.4, 0.4, 0.4); // plane — grey
 
             col = baseColor * (0.15 + diff * 0.85);
         }
