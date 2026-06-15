@@ -1,90 +1,61 @@
 import './style.css';
 import { ShaderCanvas } from './ShaderCanvas';
 
+import bgUrl from './assets/bg.jpg';
+
 const fragmentShader = `
     precision mediump float;
 
     uniform vec3 iResolution;
     uniform float iTime;
 
-    // ─── SDF functions ───────────────────────────────────────────────────────
-
-    float sdSphere(vec3 p, float r) {
-        return length(p) - r;
+    uniform sampler2D u_texture;
+    uniform vec2 u_textureSize;
+    
+    #define NUM_STRIPS 500.0
+    
+    float randomShift(float stripIndex) {
+      return fract(sin(stripIndex * 127.1) * 43758.5453);
     }
 
-    float sdPlane(vec3 p) {
-        return p.y;
-    }
-
-    // ─── Scene ───────────────────────────────────────────────────────────────
-    // returns vec2(distance, materialId)
-    // materialId: 1.0 = sphere, 2.0 = plane
-
-    vec2 scene(vec3 p) {
-        vec2 sphere = vec2(sdSphere(p - vec3(0.0, 0.5, 0.0), 0.5), 1.0);
-        vec2 plane  = vec2(sdPlane(p), 2.0);
-        return sphere.x < plane.x ? sphere : plane;
-    }
-
-    // ─── Ray marching ────────────────────────────────────────────────────────
-
-    vec2 march(vec3 ro, vec3 rd) {
-        float t = 0.0;
-        for (int i = 0; i < 64; i++) {
-            vec3 p = ro + rd * t;
-            vec2 result = scene(p);
-            if (result.x < 0.001) return vec2(t, result.y);
-            t += result.x;
-            if (t > 20.0) break;
-        }
-        return vec2(-1.0, 0.0);
-    }
-
-    // ─── Normal ──────────────────────────────────────────────────────────────
-    // gradient of SDF = outward direction from the surface
-
-    vec3 calcNormal(vec3 p) {
-        vec2 e = vec2(0.001, 0.0);
-        return normalize(vec3(
-            scene(p + e.xyy).x - scene(p - e.xyy).x,
-            scene(p + e.yxy).x - scene(p - e.yxy).x,
-            scene(p + e.yyx).x - scene(p - e.yyx).x
-        ));
-    }
-
-    // ─── Main ────────────────────────────────────────────────────────────────
 
     void main() {
-        // uv centered on Y so proportions are independent of screen size
-        vec2 uv = (gl_FragCoord.xy - 0.5 * iResolution.xy) / iResolution.y;
+        vec2 uv = gl_FragCoord.xy / iResolution.xy;
+        uv.y = 1.0 - uv.y;
+        
+        float canvasAspect = iResolution.x / iResolution.y;
+        float imageAspect  = u_textureSize.x / u_textureSize.y;
+        
+        vec2 scale = canvasAspect > imageAspect
+              ? vec2(1.0, canvasAspect / imageAspect)                                                                      
+              : vec2(imageAspect / canvasAspect, 1.0);
 
-        // camera
-        vec3 ro = vec3(0.0, 1.5, 3.0);
-        vec3 rd = normalize(vec3(uv, -1.0));
+        uv = (uv - 0.5) / scale + 0.5;
 
-        vec2 hit = march(ro, rd);
-        float t     = hit.x;
-        float matId = hit.y;
+        // 1. Определяем номер полосы по X
+        float stripIndex = floor(uv.x * NUM_STRIPS);
+        
+        // 2. Генерируем случайное смещение для этой полосы (через hash/noise)
+        float shift = randomShift(stripIndex) * 0.02 * abs(sin(iTime * 1.0 + stripIndex));
+        
+        // 3. Смещаем uv.y
+        uv.y += shift;
+        
+        // 4. Затухание снизу
+        float fadeTop = smoothstep(0.0, max(abs(sin(iTime * 0.3 + stripIndex) * 0.2), 0.1), uv.y);
+        float fadeBottom = smoothstep(1.0, max(abs(sin(iTime * 0.2 + stripIndex) * 0.9), 0.8), uv.y);
+        float fade = fadeTop * fadeBottom;
+        
+        // 5. Сэмплируем
+        vec4 color = texture2D(u_texture, uv) * fade;
 
-        vec3 col = vec3(0.08, 0.08, 0.12); // background
-
-        if (t > 0.0) {
-            vec3 p = ro + rd * t;
-            vec3 n = calcNormal(p);
-
-            vec3 lightDir = normalize(vec3(1.0, 2.0, 1.5));
-            float diff = max(dot(n, lightDir), 0.0);
-
-            vec3 baseColor = matId < 1.5
-                ? vec3(0.2, 0.5, 0.9)  // sphere — blue
-                : vec3(0.4, 0.4, 0.4); // plane — grey
-
-            col = baseColor * (0.15 + diff * 0.85);
-        }
-
-        gl_FragColor = vec4(col, 1.0);
+        // vec4 color = texture2D(u_texture, uv);
+        gl_FragColor = color;
     }
 `;
 
-new ShaderCanvas('#app', { fragmentShader });
+try {
+    new ShaderCanvas('#app', { fragmentShader, textures: { u_texture: bgUrl } });
+} catch (_error) {
+    console.log('WebGL not supported', _error);
+}
