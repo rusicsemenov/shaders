@@ -14,23 +14,30 @@
 
 1. [Встроенные функции GLSL](#встроенные-функции-glsl)
    - [fract](#fract)
+   - [mod](#mod)
    - [floor](#floor)
    - [abs](#abs)
    - [sin / cos](#sin--cos)
    - [pow](#pow)
    - [exp](#exp)
    - [length](#length)
+   - [distance](#distance)
    - [dot](#dot)
    - [cross](#cross)
    - [normalize](#normalize)
    - [mix](#mix)
    - [clamp](#clamp)
+   - [smoothstep](#smoothstep)
    - [max / min](#max--min)
 2. [Пользовательские функции](#пользовательские-функции)
    - [palette](#palette)
    - [random](#random)
    - [noise (Value Noise)](#noise-value-noise)
    - [fbm (Fractal Brownian Motion)](#fbm-fractal-brownian-motion)
+3. [Концепции шейдеров](#концепции-шейдеров)
+   - [Специальные переменные](#специальные-переменные)
+   - [Перспективная проекция](#перспективная-проекция)
+   - [Бесконечный скролл](#бесконечный-скролл)
 
 ---
 
@@ -63,6 +70,38 @@ uv = fract(uv * 1.5) - 0.5;
 vec2 i = floor(_st);   // целая часть — номер ячейки
 vec2 f = fract(_st);   // дробная часть — позиция внутри ячейки
 ```
+
+---
+
+### `mod`
+
+> [Khronos Reference](https://registry.khronos.org/OpenGL-Refpages/gl4/html/mod.xhtml)
+
+```glsl
+float mod(float x, float y)  // x - y * floor(x/y)
+vec2  mod(vec2 x, float y)
+vec2  mod(vec2 x, vec2 y)
+```
+
+Остаток от деления — аналог `%` в JS, но для `float`. Результат всегда в диапазоне `[0.0, y)`.
+
+Ключевое отличие от JS `%`: `mod(-1.0, 3.0) = 2.0`, а не `-1.0` — результат всегда положительный.
+
+**Применение в проекте — бесконечный скролл (`12_main.ts`):**
+
+```glsl
+float scrolledZ = zFar + mod(position.z - zFar + iTime * speed, depth);
+```
+
+Без `mod` точка летела бы в бесконечность. С `mod` значение «оборачивается» назад к `zFar` как только достигает `zNear`:
+
+```
+iTime * speed:  0    5   10   15   17.5  20   25
+mod(..., 17.5): 0    5   10   15   0     2.5  7.5  ← сброс
+scrolledZ:     -18  -13  -8   -3  -18  -15.5 -10.5
+```
+
+Каждая точка имеет свой начальный `position.z`, поэтому они равномерно распределены вдоль тоннеля в любой момент времени.
 
 ---
 
@@ -207,6 +246,28 @@ float d = length(uv) * exp(-length(or_uv));
 
 ---
 
+### `distance`
+
+> [Khronos Reference](https://registry.khronos.org/OpenGL-Refpages/gl4/html/distance.xhtml)
+
+```glsl
+float distance(vec2 p0, vec2 p1)  // = length(p1 - p0)
+float distance(vec3 p0, vec3 p1)
+```
+
+Расстояние между двумя точками. Сокращение для `length(p1 - p0)`.
+
+**Применение в проекте — круглые точки (`12_main.ts`, fragment shader):**
+
+```glsl
+float dist = distance(gl_PointCoord, vec2(0.5));
+if (dist > 0.5) discard;
+```
+
+`gl_PointCoord` — UV-координата внутри точки от `(0,0)` до `(1,1)`. Центр точки = `vec2(0.5)`. Всё что дальше 0.5 от центра — за пределами круга, `discard` убирает эти фрагменты.
+
+---
+
 ### `dot`
 
 > [Khronos Reference](https://registry.khronos.org/OpenGL-Refpages/gl4/html/dot.xhtml)
@@ -311,6 +372,35 @@ float clamp(float x, float minVal, float maxVal)
 clamp(f*f * 4.0, 0.0, 1.0)
 clamp(length(q), 0.0, 1.0)
 ```
+
+---
+
+### `smoothstep`
+
+> [Khronos Reference](https://registry.khronos.org/OpenGL-Refpages/gl4/html/smoothstep.xhtml) · [The Book of Shaders — Shaping Functions](https://thebookofshaders.com/05/)
+
+```glsl
+float smoothstep(float edge0, float edge1, float x)
+```
+
+Плавная интерполяция между 0 и 1 по S-образной кривой (Hermite). Возвращает `0` если `x <= edge0`, `1` если `x >= edge1`.
+
+Формула внутри: `t = clamp((x - edge0) / (edge1 - edge0), 0, 1); return t*t*(3 - 2*t)`
+
+В отличие от `clamp`, переход не линейный — он замедляется у краёв (ease-in/ease-out).
+
+```
+clamp:      /
+smoothstep: ⌒  (S-кривая)
+```
+
+**Применение в проекте — мягкие края точек (`12_main.ts`, fragment shader):**
+
+```glsl
+float alpha = smoothstep(0.5, 0.1, dist);
+```
+
+Обратите внимание: `edge0 > edge1` — это инверсия. При `dist = 0.5` (край) → `alpha = 0`, при `dist = 0.1` (центр) → `alpha = 1`. Точка плавно светлеет к центру.
 
 ---
 
@@ -479,22 +569,115 @@ float f = fbm(st + r);
 
 ---
 
+---
+
+## Концепции шейдеров
+
+### Специальные переменные
+
+Встроенные переменные WebGL — не нужно объявлять, они уже существуют.
+
+| Переменная | Шейдер | Описание |
+|---|---|---|
+| `gl_Position` | vertex | Финальная позиция вершины в clip space `(-1..1)`. Обязательно устанавливать. |
+| `gl_PointSize` | vertex | Размер точки в пикселях при `gl.POINTS`. |
+| `gl_PointCoord` | fragment | UV внутри точки `(0,0)...(1,1)`, доступна только при `gl.POINTS`. |
+| `gl_FragColor` | fragment | Финальный цвет пикселя `vec4(r, g, b, a)`. Обязательно устанавливать. |
+
+**Varyings** — переменные объявленные с `varying`, передаются из vertex шейдера в fragment. GPU автоматически интерполирует значение между вершинами.
+
+```glsl
+// vertex shader
+varying float vAlpha;
+vAlpha = 0.8;
+
+// fragment shader — получает уже интерполированное значение
+varying float vAlpha;
+gl_FragColor = vec4(col, vAlpha);
+```
+
+---
+
+### Перспективная проекция
+
+Без перспективы все точки выглядят одинакового размера независимо от расстояния. Перспектива делает дальние объекты меньше, схлопывая их к центру экрана.
+
+**Формула деления на расстояние:**
+
+```glsl
+float cameraZ = 1.0;           // позиция камеры по Z
+float dist = cameraZ - scrolledZ;  // расстояние до точки (всегда > 0)
+float perspW = dist / cameraZ;     // нормализованное расстояние
+
+float aspect = iResolution.x / iResolution.y;
+
+gl_Position = vec4(
+    pos.x / perspW / aspect,  // дальние точки X → к 0 (центру)
+    pos.y / perspW,           // дальние точки Y → к 0 (горизонт)
+    ndcZ,
+    1.0
+);
+```
+
+При `scrolledZ = -18` (далеко): `dist = 19`, `perspW = 19` → координаты делятся на 19 → точка у центра.
+При `scrolledZ = -0.5` (близко): `dist = 1.5`, `perspW = 1.5` → координаты делятся на 1.5 → точка у края.
+
+**Размер точек с перспективой:**
+
+```glsl
+gl_PointSize = clamp(7.0 / perspW, 1.0, 10.0);
+```
+
+Ближние точки большие, дальние — маленькие.
+
+---
+
+### Бесконечный скролл
+
+Паттерн для создания эффекта бесконечного движения без изменения буфера геометрии.
+
+**Идея:** каждая точка имеет начальный `position.z` (стартовая фаза). `mod` заставляет значение циклически возвращаться к старту:
+
+```glsl
+float zFar  = -18.0;
+float zNear = -0.5;
+float depth = zNear - zFar;  // = 17.5
+float speed = 3.0;
+
+float scrolledZ = zFar + mod(position.z - zFar + iTime * speed, depth);
+```
+
+Визуализация для одной точки с `position.z = -9.0` (середина диапазона):
+
+```
+t=0:  mod(-9+18 + 0,   17.5) = mod(9,  17.5) = 9   → scrolledZ = -18+9  = -9
+t=3:  mod(-9+18 + 9,   17.5) = mod(18, 17.5) = 0.5 → scrolledZ = -18+0.5 = -17.5 (прыжок!)
+t=6:  mod(-9+18 + 18,  17.5) = mod(27, 17.5) = 9.5 → scrolledZ = -18+9.5 = -8.5
+```
+
+Прыжок (`scrolledZ` меняется с `-0.5` на `-18`) происходит у всех точек в разное время и они в этот момент прозрачные (fade near + fade far), поэтому он незаметен.
+
+---
+
 ## Быстрая шпаргалка
 
 | Функция | Результат | Применение |
 |---|---|---|
 | `fract(x)` | `[0, 1)` дробная часть | тайлинг, шум |
+| `mod(x, y)` | `[0, y)` остаток деления | бесконечный скролл, цикл |
 | `floor(x)` | целое вниз | индекс ячейки |
-| `abs(x)` | `|x|` | симметрия |
+| `abs(x)` | `\|x\|` | симметрия |
 | `sin/cos(x)` | `[-1, 1]` | волны, цвет, вращение |
 | `pow(x, e)` | `x^e` | гамма, bloom |
 | `exp(x)` | `e^x` | затухание |
-| `length(v)` | длина вектора | расстояние |
+| `length(v)` | длина вектора | расстояние от начала |
+| `distance(a,b)` | расстояние между точками | круглые точки (`gl_PointCoord`) |
 | `dot(a,b)` | скалярное произв. | освещение, хэш |
 | `cross(a,b)` | векторное произв. | нормали |
 | `normalize(v)` | единичный вектор | направления |
-| `mix(a,b,t)` | интерполяция | цвет, переходы |
+| `mix(a,b,t)` | линейная интерполяция | цвет, переходы |
 | `clamp(x,a,b)` | ограничение диапазона | безопасный `t` для `mix` |
+| `smoothstep(e0,e1,x)` | S-кривая `[0,1]` | мягкие края, fade |
 | `max/min(a,b)` | максимум/минимум | освещение |
 | `random(uv)` | псевдослучайный `[0,1)` | шум |
 | `noise(uv)` | плавный шум | органика |
