@@ -1,6 +1,5 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader';
+import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 
 const scene = new THREE.Scene();
@@ -53,7 +52,7 @@ if (stored) {
 gui.onChange(() => localStorage.setItem('shaderSettings', JSON.stringify(settings)));
 
 loader.load('/torusHQ.glb', (gltf: GLTF) => {
-    torus = gltf.scene.getObjectByName('Torus-v2');
+    torus = gltf.scene.getObjectByName('Torus-v2') as THREE.Mesh;
     if (!torus) {
         console.error('THREE.Torus not found.');
         return;
