@@ -109,7 +109,7 @@ const material2 = new THREE.ShaderMaterial({
     side: THREE.DoubleSide,
 });
 
-const bgMaterial2 = new THREE.MeshLambertMaterial({ color: 0x020e3d, side: THREE.DoubleSide });
+// const bgMaterial2 = new THREE.MeshLambertMaterial({ color: 0x020e3d, side: THREE.DoubleSide });
 const bgMesh = new THREE.Mesh(bgGeometry, material2);
 bgMesh.position.z = -3;
 scene.add(bgMesh);
@@ -281,7 +281,7 @@ renderer.setAnimationLoop(() => {
             torus.rotation.z = Math.PI * 2 * eased;
 
             const tXY = Math.min(phase / (rotateDuration * 0.6), 1);
-            const swing = Math.sin(tXY * Math.PI);
+            const swing = Math.pow(Math.sin(tXY * Math.PI), 2);
             torus.rotation.x = cycleStartX * swing;
             torus.rotation.y = cycleStartY * swing;
         } else {
