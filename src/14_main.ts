@@ -9,9 +9,11 @@ const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerH
 camera.position.set(1.5, 1, 4);
 camera.lookAt(0, 0, 0);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+
+const renderer = new THREE.WebGLRenderer({ antialias: !isMobile });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 document.querySelector('#app')?.appendChild(renderer.domElement);
 
 const bgGeometry = new THREE.PlaneGeometry(200, 200);
@@ -49,7 +51,7 @@ const fragmentShader = `
                 (d - b) * u.x * u.y;
     }
     
-    #define NUM_OCTAVES 5
+    #define NUM_OCTAVES ${isMobile ? 3 : 5}
     
     float fbm ( in vec2 _st) {
         float v = 0.0;
@@ -254,7 +256,7 @@ window.addEventListener('resize', () => {
 });
 
 const rotateDuration = 10000;
-const pauseDuration = 2000;
+const pauseDuration = 3000;
 const cycleDuration = rotateDuration + pauseDuration;
 
 let cycleStartX = 0;
