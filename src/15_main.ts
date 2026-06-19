@@ -21,7 +21,7 @@ document.querySelector('#app')?.appendChild(renderer.domElement);
 let aspect: number = 1.9;
 let bgMaterial: THREE.MeshBasicMaterial | null = null;
 const loader = new THREE.TextureLoader();
-loader.load('bg.jpg', (texture) => {
+loader.load('bg2.jpg', (texture) => {
     aspect = texture.image.width / texture.image.height;
     const bgPlate = new THREE.PlaneGeometry(20, 20 / aspect);
 
