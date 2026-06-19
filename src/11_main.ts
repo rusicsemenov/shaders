@@ -1,6 +1,9 @@
 import './style.css';
 import { ShaderCanvas } from './ShaderCanvas';
 
+const documentElement = document.documentElement;
+documentElement.style.setProperty('--bg', `#08060d`);
+
 const vertexShader = `
     attribute vec3 position;
     attribute float a_type; // 0.0 = sphere, 1.0 = plane
