@@ -34,22 +34,50 @@ const fragmentShader = /*language=GLSL*/ `
 
     const float DRUM_R = 0.75;
     const float DRUM_H = 0.42;
-    const float DIST_BETWEEN = 0.01;
+    const float DIST_BETWEEN = 0.1;
     const float DIST = DRUM_H * 2.0 + DIST_BETWEEN;
     const float SIDE_Z_OFFSET = 0.1;
+    const float RING_TUBE_R   = 0.004; // ring tube cross-section radius
 
-    // Returns (distance, drumId) for the closest of the three slot drums.
-    // Nearest drum is determined by X coordinate alone — no need to evaluate all three.
+    // Signed distance to a thin torus ring at world position (cx, 0, cz), matching drum radius.
+    // cz shifts the ring in Z (depth), creating the levitation effect.
+    float sdRing(vec3 point, float cx, float cz) {
+        vec2 q = vec2(length(point.yz - vec2(0.0, cz)) - DRUM_R, point.x - cx);
+        return length(q) - RING_TUBE_R;
+    }
+
+    // Nearest ring is determined by X coordinate alone (same proof as scene() drum selection).
+    // Boundaries sit at the midpoints between adjacent ring X positions: 0 and ±(DIST*0.5+DRUM_H).
+    // All rings share the same cz so the X-only selection proof still holds.
+    float nearestRing(vec3 point) {
+        const float boundary = DIST * 0.5 + DRUM_H;
+        if (point.x < -boundary) return sdRing(point, -(DIST + DRUM_H), 0.0);
+        if (point.x <  0.0)      return sdRing(point, -DRUM_H,          SIDE_Z_OFFSET);
+        if (point.x <  boundary) return sdRing(point,  DRUM_H,          SIDE_Z_OFFSET);
+        return                          sdRing(point,  DIST + DRUM_H,   0.0);
+    }
+
+    // Returns (distance, objectId) for the scene.
+    // Drums: 1=left 2=center 3=right   Rings: 4
     vec2 scene(vec3 point) {
         float drumCenterX = clamp(floor(point.x / DIST + 0.5), -1.0, 1.0);
 
+        float drumDist;
+        float drumId;
         if (drumCenterX < -0.5) {
-            return vec2(sdCylinder(rotX(point + vec3(DIST, 0.0, SIDE_Z_OFFSET), uAngle.x), DRUM_R, DRUM_H), 1.0);
+            drumDist = sdCylinder(rotX(point + vec3(DIST, 0.0, SIDE_Z_OFFSET), uAngle.x), DRUM_R, DRUM_H);
+            drumId = 1.0;
         } else if (drumCenterX > 0.5) {
-            return vec2(sdCylinder(rotX(point + vec3(-DIST, 0.0, SIDE_Z_OFFSET), uAngle.z), DRUM_R, DRUM_H), 3.0);
+            drumDist = sdCylinder(rotX(point + vec3(-DIST, 0.0, SIDE_Z_OFFSET), uAngle.z), DRUM_R, DRUM_H);
+            drumId = 3.0;
         } else {
-            return vec2(sdCylinder(rotX(point, uAngle.y), DRUM_R, DRUM_H), 2.0);
+            drumDist = sdCylinder(rotX(point, uAngle.y), DRUM_R, DRUM_H);
+            drumId = 2.0;
         }
+
+        float ringDist = nearestRing(point);
+        if (ringDist < drumDist) return vec2(ringDist, 4.0);
+        return vec2(drumDist, drumId);
     }
 
     // Estimates surface normal at point using central finite differences on the SDF.
@@ -62,11 +90,15 @@ const fragmentShader = /*language=GLSL*/ `
         ));
     }
 
-    // Ray marches from rayOrigin in direction rayDir; returns (dist, drumId) or (-1, 0) on miss.
-    vec2 march(vec3 rayOrigin, vec3 rayDir) {
+    // Ray marches from rayOrigin in direction rayDir.
+    // Returns (dist, objectId) or (-1, 0) on miss. Accumulates ring glow into ringGlow.
+    vec2 march(vec3 rayOrigin, vec3 rayDir, out float ringGlow) {
         float dist = 0.0;
+        ringGlow = 0.0;
         for (int i = 0; i < 80; i++) {
-            vec2 sceneSample = scene(rayOrigin + rayDir * dist);
+            vec3 p = rayOrigin + rayDir * dist;
+            vec2 sceneSample = scene(p);
+            ringGlow += exp(-nearestRing(p) * 6.0) * 0.025;
             if (sceneSample.x < 0.001) return vec2(dist, sceneSample.y);
             if (dist > 20.0)           break;
             dist += sceneSample.x;
@@ -109,34 +141,44 @@ const fragmentShader = /*language=GLSL*/ `
         vec3 rayDir = r < 0.001
             ? vec3(0.0, 0.0, -1.0)
             : normalize(vec3(uv * (sin(theta) / r), -cos(theta)));
-        vec2 marchResult = march(rayOrigin, rayDir);
+        float ringGlow = 0.0;
+        vec2 marchResult = march(rayOrigin, rayDir, ringGlow);
 
         vec3 color;
 
         if (marchResult.x < 0.0) {
             color = vec3(0.04, 0.04, 0.07);
         } else {
-            vec3  hitPos = rayOrigin + rayDir * marchResult.x;
-            vec3  normal = calcNormal(hitPos);
             float drumId = marchResult.y;
 
-            vec3 localPos;
-            if      (drumId < 1.5) localPos = rotX(hitPos + vec3(DIST,  0.0, SIDE_Z_OFFSET), uAngle.x);
-            else if (drumId < 2.5) localPos = rotX(hitPos,                          uAngle.y);
-            else                   localPos = rotX(hitPos + vec3(-DIST, 0.0, SIDE_Z_OFFSET),  uAngle.z);
+            if (drumId > 3.5) {
+                // Ring hit — bright emissive cyan, no lighting needed
+                color = vec3(0.15, 0.85, 1.0) * 4.0;
+            } else {
+                vec3  hitPos = rayOrigin + rayDir * marchResult.x;
+                vec3  normal = calcNormal(hitPos);
 
-            vec3 albedo = drumAlbedo(localPos);
+                vec3 localPos;
+                if      (drumId < 1.5) localPos = rotX(hitPos + vec3(DIST,  0.0, SIDE_Z_OFFSET), uAngle.x);
+                else if (drumId < 2.5) localPos = rotX(hitPos,                                    uAngle.y);
+                else                   localPos = rotX(hitPos + vec3(-DIST, 0.0, SIDE_Z_OFFSET),  uAngle.z);
 
-            vec3 lightDir1 = normalize(vec3( 2.0,  4.0, 5.0));
-            vec3 lightDir2 = normalize(vec3(-3.0, -1.0, 3.0));
-            vec3 viewDir   = -rayDir;
+                vec3 albedo = drumAlbedo(localPos);
 
-            float diffuse  = max(dot(normal, lightDir1), 0.0) * 0.85
-                           + max(dot(normal, lightDir2), 0.0) * 0.20;
-            float specular = pow(max(dot(normal, normalize(lightDir1 + viewDir)), 0.0), 80.0);
+                vec3 lightDir1 = normalize(vec3( 2.0,  4.0, 5.0));
+                vec3 lightDir2 = normalize(vec3(-3.0, -1.0, 3.0));
+                vec3 viewDir   = -rayDir;
 
-            color = albedo * (0.08 + diffuse) + vec3(1.0) * specular * 0.55;
+                float diffuse  = max(dot(normal, lightDir1), 0.0) * 0.85
+                               + max(dot(normal, lightDir2), 0.0) * 0.20;
+                float specular = pow(max(dot(normal, normalize(lightDir1 + viewDir)), 0.0), 80.0);
+
+                color = albedo * (0.08 + diffuse) + vec3(1.0) * specular * 0.55;
+            }
         }
+
+        // Additive cyan glow halo around rings — accumulated during march
+        color += vec3(0.1, 0.65, 1.0) * ringGlow;
 
         float vignette = 1.0 - dot(uv * 0.65, uv * 0.65);
         color *= clamp(vignette, 0.0, 1.0);
