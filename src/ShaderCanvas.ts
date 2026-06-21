@@ -7,6 +7,7 @@ interface ShaderCanvasOptions {
     vertexShader?: string;
     uniforms?: Record<string, UniformValue>;
     textures?: Record<string, string>;
+    canvasTextures?: Record<string, HTMLCanvasElement>;
     particles?: Float32Array;
     attributes?: Record<string, { data: Float32Array; size: number }>;
     antialias?: boolean;
@@ -103,12 +104,19 @@ class ShaderCanvas {
                 this.cacheUniform(name);
             }
         }
+        let texUnit = 0;
         if (options.textures) {
-            let unit = 0;
             for (const [name, url] of Object.entries(options.textures)) {
                 this.cacheUniform(name);
                 this.cacheUniform(name + 'Size');
-                this.loadTexture(name, url, unit++);
+                this.loadTexture(name, url, texUnit++);
+            }
+        }
+        if (options.canvasTextures) {
+            for (const [name, canvas] of Object.entries(options.canvasTextures)) {
+                this.cacheUniform(name);
+                this.cacheUniform(name + 'Size');
+                this.loadCanvasTexture(name, canvas, texUnit++);
             }
         }
 
@@ -143,6 +151,19 @@ class ShaderCanvas {
                 height: img.naturalHeight,
             });
         };
+    }
+
+    private loadCanvasTexture(name: string, canvas: HTMLCanvasElement, unit: number): void {
+        const gl = this.gl;
+        const texture = gl.createTexture()!;
+        gl.activeTexture(gl.TEXTURE0 + unit);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        this.loadedTextures.set(name, { texture, unit, width: canvas.width, height: canvas.height });
     }
 
     private cacheUniform(name: string): void {
