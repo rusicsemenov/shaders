@@ -36,6 +36,7 @@ const fragmentShader = /*language=GLSL*/ `
     const float DRUM_H = 0.42;
     const float DIST_BETWEEN = 0.01;
     const float DIST = DRUM_H * 2.0 + DIST_BETWEEN;
+    const float SIDE_Z_OFFSET = 0.1;
 
     // Returns (distance, drumId) for the closest of the three slot drums.
     // Nearest drum is determined by X coordinate alone — no need to evaluate all three.
@@ -43,9 +44,9 @@ const fragmentShader = /*language=GLSL*/ `
         float drumCenterX = clamp(floor(point.x / DIST + 0.5), -1.0, 1.0);
 
         if (drumCenterX < -0.5) {
-            return vec2(sdCylinder(rotX(point + vec3(DIST, 0.0, 0.0), uAngle.x), DRUM_R, DRUM_H), 1.0);
+            return vec2(sdCylinder(rotX(point + vec3(DIST, 0.0, SIDE_Z_OFFSET), uAngle.x), DRUM_R, DRUM_H), 1.0);
         } else if (drumCenterX > 0.5) {
-            return vec2(sdCylinder(rotX(point - vec3(DIST, 0.0, 0.0), uAngle.z), DRUM_R, DRUM_H), 3.0);
+            return vec2(sdCylinder(rotX(point + vec3(-DIST, 0.0, SIDE_Z_OFFSET), uAngle.z), DRUM_R, DRUM_H), 3.0);
         } else {
             return vec2(sdCylinder(rotX(point, uAngle.y), DRUM_R, DRUM_H), 2.0);
         }
@@ -101,9 +102,13 @@ const fragmentShader = /*language=GLSL*/ `
     void main() {
         vec2 uv = (gl_FragCoord.xy - iResolution.xy * 0.5) / iResolution.y;
 
-        // Camera position
-        vec3 rayOrigin = vec3(0.0, 0.0, 4.0);
-        vec3 rayDir    = normalize(vec3(uv, -1.5));
+        // Camera — fish-eye (equidistant spherical projection)
+        vec3 rayOrigin = vec3(0.0, 0.0, 2.0);
+        float r = length(uv);
+        float theta = r * 1.9; // field-of-view spread: larger = more fish-eye
+        vec3 rayDir = r < 0.001
+            ? vec3(0.0, 0.0, -1.0)
+            : normalize(vec3(uv * (sin(theta) / r), -cos(theta)));
         vec2 marchResult = march(rayOrigin, rayDir);
 
         vec3 color;
@@ -116,9 +121,9 @@ const fragmentShader = /*language=GLSL*/ `
             float drumId = marchResult.y;
 
             vec3 localPos;
-            if      (drumId < 1.5) localPos = rotX(hitPos - vec3(DIST * -1.0, 0.0, 0.0), uAngle.x);
-            else if (drumId < 2.5) localPos = rotX(hitPos,                                uAngle.y);
-            else                   localPos = rotX(hitPos - vec3(DIST, 0.0, 0.0),         uAngle.z);
+            if      (drumId < 1.5) localPos = rotX(hitPos + vec3(DIST,  0.0, SIDE_Z_OFFSET), uAngle.x);
+            else if (drumId < 2.5) localPos = rotX(hitPos,                          uAngle.y);
+            else                   localPos = rotX(hitPos + vec3(-DIST, 0.0, SIDE_Z_OFFSET),  uAngle.z);
 
             vec3 albedo = drumAlbedo(localPos);
 
