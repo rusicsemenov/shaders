@@ -11,7 +11,7 @@ document.body.appendChild(renderer.domElement);
 
 const geometry = new THREE.PlaneGeometry(2, 2, 200, 200);
 
-const fragmentShader = `
+const fragmentShader = /*language=GLSL*/ `
     #ifdef GL_ES
     precision mediump float;
     #endif

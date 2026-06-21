@@ -9,9 +9,10 @@ interface ShaderCanvasOptions {
     textures?: Record<string, string>;
     particles?: Float32Array;
     attributes?: Record<string, { data: Float32Array; size: number }>;
+    antialias?: boolean;
 }
 
-const DEFAULT_VERTEX_SHADER = `
+const DEFAULT_VERTEX_SHADER = /*language=GLSL*/ `
     attribute vec2 position;
     void main() {
         gl_Position = vec4(position, 0.0, 1.0);
@@ -49,7 +50,7 @@ class ShaderCanvas {
         el.appendChild(this.canvas);
 
         // --- WebGL context ---
-        const gl = this.canvas.getContext('webgl');
+        const gl = this.canvas.getContext('webgl', { antialias: options.antialias ?? false });
         if (!gl) throw new Error('ShaderCanvas: WebGL not supported in this browser');
         this.gl = gl;
 

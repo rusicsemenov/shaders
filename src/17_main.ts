@@ -45,7 +45,7 @@ material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
 
     shader.vertexShader =
-        `uniform float uTime;
+        /*language=GLSL*/ `uniform float uTime;
 uniform float uBigFX, uBigFY, uBigSpd, uBigMod;
 uniform float uW1Amp, uW1FX, uW1Spd;
 uniform float uW2Amp, uW2FX, uW2Spd;

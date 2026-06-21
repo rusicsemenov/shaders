@@ -33,7 +33,7 @@ const uniforms = {
 
 // Simplex noise 3D (Stefan Gustavson / Ian McEwan)
 // Функции переименованы во избежание конфликта с возможными чанками Three.js
-const SIMPLEX_GLSL = `
+const SIMPLEX_GLSL = /*language=GLSL*/ `
 vec3 sn_mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
 vec4 sn_mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
 vec4 sn_permute(vec4 x) { return sn_mod289(((x * 34.0) + 1.0) * x); }
