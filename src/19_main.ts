@@ -10,6 +10,28 @@ gui.add(speeds, 'left', 0, 6, 0.05).name('Left speed');
 gui.add(speeds, 'center', 0, 6, 0.05).name('Center speed');
 gui.add(speeds, 'right', 0, 6, 0.05).name('Right speed');
 
+// ─── Background settings ──────────────────────────────────────────────────────
+const uBgColor = { value: [0.04, 0.04, 0.07, 1.0] };
+const bgSettings = { transparent: false, color: '#0a0a12' };
+
+function hexToRgbFloat(hex: string): [number, number, number] {
+    const n = Number.parseInt(hex.replace('#', ''), 16);
+    return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+}
+
+function updateBg() {
+    if (bgSettings.transparent) {
+        uBgColor.value = [0, 0, 0, 0];
+    } else {
+        const [r, g, b] = hexToRgbFloat(bgSettings.color);
+        uBgColor.value = [r, g, b, 1];
+    }
+}
+
+const bgFolder = gui.addFolder('Background');
+bgFolder.add(bgSettings, 'transparent').name('Transparent').onChange(updateBg);
+bgFolder.addColor(bgSettings, 'color').name('Color').onChange(updateBg);
+
 // ─── Fragment shader ──────────────────────────────────────────────────────────
 const fragmentShader = /*language=GLSL*/ `
     precision mediump float;
@@ -18,6 +40,7 @@ const fragmentShader = /*language=GLSL*/ `
     uniform vec3      iResolution;
     uniform vec3      uAngle;       // accumulated rotation angle: left / center / right
     uniform sampler2D uIconAtlas;   // 6-cell horizontal atlas of user SVG icons
+    uniform vec4      uBgColor;     // .rgb = background color, .a = 0 for transparent
 
     const float PI = 3.14159265;
 
@@ -167,10 +190,14 @@ const fragmentShader = /*language=GLSL*/ `
         vec2 marchResult = march(rayOrigin, rayDir, ringGlow);
 
         vec3 color;
+        float fragAlpha;
+        bool isMiss = marchResult.x < 0.0;
 
-        if (marchResult.x < 0.0) {
-            color = vec3(0.04, 0.04, 0.07);
+        if (isMiss) {
+            color = uBgColor.rgb;
+            fragAlpha = uBgColor.a;
         } else {
+            fragAlpha = 1.0;
             float drumId = marchResult.y;
 
             if (drumId > 4.5) {
@@ -229,11 +256,16 @@ const fragmentShader = /*language=GLSL*/ `
         // Additive cyan glow halo around rings — accumulated during march
         color += vec3(0.1, 0.65, 1.0) * ringGlow;
 
+        // In transparent mode, glow alone makes miss pixels semi-visible
+        if (isMiss && uBgColor.a < 0.5) {
+            fragAlpha = clamp(ringGlow * 8.0, 0.0, 1.0);
+        }
+
         float vignette = 1.0 - dot(uv * 0.65, uv * 0.65);
         color *= clamp(vignette, 0.0, 1.0);
         color = pow(max(color, 0.0), vec3(0.4545));
 
-        gl_FragColor = vec4(color, 1.0);
+        gl_FragColor = vec4(color, fragAlpha);
     }
 `;
 
@@ -396,7 +428,7 @@ async function buildAtlas(svgs: string[]): Promise<HTMLCanvasElement> {
         const atlas = await buildAtlas(ICON_SVGS);
         new ShaderCanvas('#app', {
             fragmentShader,
-            uniforms: { uAngle },
+            uniforms: { uAngle, uBgColor },
             canvasTextures: { uIconAtlas: atlas },
         });
     } catch (e) {
