@@ -2,6 +2,8 @@ import './style.css';
 import { ShaderCanvas } from './ShaderCanvas';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 
+// https://themultiple.com
+
 // ─── Base spin speed for each drum (radians/second) ──────────────────────────
 const speeds = { left: 1.1, center: 1.9, right: 0.7 };
 
