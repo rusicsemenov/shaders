@@ -173,7 +173,7 @@ const frag = /*language=GLSL*/ `
         for (int i = 0; i < 5; i++) {
             float fi = float(i);
             vec2  pos = (vec2(h11(fi*7.13+1.3), h11(fi*13.7+2.7)) - 0.5) * vec2(aspect, 1.0);
-            float r   = 0.02  + 0.22 * h11(fi*3.1+0.5) * sin(uTime*0.1+fi*3.7);
+            float r   = 0.02  + 0.14 * h11(fi*3.1+0.5) * sin(uTime*0.1+fi*3.7);
             float ph  = 6.28318 * h11(fi*17.3+4.1);
             float spd = 1.025  + 0.04 * h11(fi*11.1+6.3);
 
@@ -251,7 +251,13 @@ const uOffset = gl.getUniformLocation(prog, 'uBlockOffset');
 
 // ─── Render loop ──────────────────────────────────────────────────────────────
 
-const cards = document.querySelectorAll<HTMLElement>('.card');
+const visibleCards = new Set<Element>();
+const observer = new IntersectionObserver((entries) => {
+    for (const e of entries)
+        e.isIntersecting ? visibleCards.add(e.target) : visibleCards.delete(e.target);
+});
+document.querySelectorAll('.card').forEach((c) => observer.observe(c));
+
 const t0 = performance.now();
 
 function tick() {
@@ -270,7 +276,7 @@ function tick() {
     gl.uniform1f(uTime, t);
     gl.enable(gl.SCISSOR_TEST);
 
-    for (const card of cards) {
+    for (const card of visibleCards) {
         const r = card.getBoundingClientRect();
         if (r.width < 1 || r.height < 1) continue;
 
