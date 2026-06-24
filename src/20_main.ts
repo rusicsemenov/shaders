@@ -55,6 +55,18 @@ document.getElementById('app')!.innerHTML = `
     overflow: hidden;
     background: transparent; /* WebGL canvas behind */
   }
+  .grid2 {
+    grid-template-columns: repeat(auto-fit, minmax(440px, 1fr));
+  }
+  .grid2 .card {
+    height: 400px;
+  }
+  .grid3 {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  }
+  .grid3 .card {
+    height: 600px;
+  }
   .card span {
     color: #fff;
     font-weight: 500;
@@ -93,7 +105,7 @@ document.getElementById('app')!.innerHTML = `
 <div class="section">
   <h2>Our Services</h2>
   <p>We work closely with teams to deliver thoughtful solutions from strategy through to launch.</p>
-  <div class="grid">
+  <div class="grid grid2">
     <div class="card"><span>Brand Strategy</span></div>
     <div class="card"><span>Web Development</span></div>
     <div class="card"><span>Growth Consulting</span></div>
@@ -103,9 +115,11 @@ document.getElementById('app')!.innerHTML = `
 <div class="section">
   <h2>Our Ideas</h2>
   <p>Experiments, research, and open thinking on the things we find most interesting.</p>
-  <div class="grid">
+  <div class="grid grid3">
     <div class="card"><span>Open Source</span></div>
     <div class="card"><span>Research Lab</span></div>
+    <div class="card"><span>Community</span></div>
+    <div class="card"><span>Community</span></div>
     <div class="card"><span>Community</span></div>
   </div>
 </div>
@@ -191,27 +205,59 @@ const frag = /*language=GLSL*/ `
             col += bc * blob * flicker * 0.8;
         }
 
-        // ── Sparkles (computed in pixel space so they scale with card size) ───
-        float G    = 38.0;  // grid cell in pixels
+        // ── Sparkles: статичные мерцающие ────────────────────────────────────
+        float G    = 148.0;
         vec2  cell = floor(px / G);
 
         for (int dx = -1; dx <= 1; dx++) {
             for (int dy = -1; dy <= 1; dy++) {
                 vec2  c    = cell + vec2(float(dx), float(dy));
-                // Each cell gets one sparkle at a random position within it
                 vec2  sp   = (c + vec2(h21(c), h21(c + vec2(17.3, 23.7)))) * G;
                 float sph  = 6.28318 * h21(c + vec2(7.3,  5.1));
                 float sspd = 0.4     + 5.0  * h21(c + vec2(3.7,  9.1));
                 float b    = pow(0.5 + 0.5  * sin(uTime * sspd + sph), 5.0);
-    
+
                 float dist  = length(px - sp);
                 float spark = exp(-dist*dist / 1.2) * b;
-    
-                // 15 % of sparkles are warm orange, rest are cool white-blue
+
                 bool  warm = h21(c + vec2(1.1, 2.2)) < 0.15;
                 vec3  sc   = warm ? vec3(1.0, 0.6, 0.15) : vec3(0.85, 0.92, 1.0);
                 col += sc * spark * 5.0;
             }
+        }
+
+        // ── Sparkles: летящие с глубиной (z) ─────────────────────────────────
+        // uv здесь с центром в (0.5, 0.5)
+        vec2 center = uv - 0.5;
+
+        for (int i = 0; i < 240; i++) {
+            float fi = float(i);
+
+            // z: fract делает бесконечный цикл без if — когда долетело (z→0), прыгает к 1
+            float speed = 0.08 + 0.12 * h11(fi * 3.7 + 1.1);
+            float z     = fract(h11(fi * 13.1 + 5.3) - uTime * speed);
+
+            // Базовая позиция частицы (случайная, от центра)
+            vec2 base = vec2(h11(fi * 7.3 + 2.1), h11(fi * 11.7 + 4.3)) - 0.5;
+            base     *= vec2(aspect, 1.0); // учитываем пропорции карточки
+
+            // Перспективная проекция: ближе → дальше от центра
+            vec2 proj = base / max(z, 0.001);
+
+            // Размер и яркость: ближе → крупнее и ярче
+            float proximity = 1.0 - z;
+            float radius    = mix(0.3, 2.5, proximity * proximity);
+            float bright    = mix(0.0, 1.0, proximity * proximity);
+
+            // Расстояние в пикселях от текущего фрагмента до частицы
+            vec2  projPx = (proj / vec2(aspect, 1.0) + 0.5) * uBlockSize;
+            float d      = length(px - projPx);
+            float fly    = exp(-d * d / (radius * radius + 0.001)) * bright;
+
+            // Цвет: смесь белого и голубого, изредка оранжевый
+            bool  warm2 = h11(fi * 5.1 + 0.7) < 0.1;
+            vec3  fc    = warm2 ? vec3(1.0, 0.55, 0.1) : mix(vec3(0.6, 0.8, 1.0), vec3(1.0), proximity);
+            col += fc * fly * 3.0;
         }
     
         gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
