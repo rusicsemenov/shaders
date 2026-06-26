@@ -10,10 +10,10 @@ const fragmentShader = /*language=GLSL*/ `
     uniform float     iTime;
     uniform vec3      iResolution;
     
-    const int COUNT = 10;
-    const float SIZE = 0.009;
+    const int COUNT = 5;
+    const float SIZE = 0.029;
     const float PI = 3.14159;
-    const float TILES = 2.0;
+    const float TILES = 3.0;
 
     float random(in vec2 _st) {
         return fract(sin(dot(_st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
@@ -21,21 +21,31 @@ const fragmentShader = /*language=GLSL*/ `
 
     void main() {
         vec2 tileSize = iResolution.xy / TILES;
+        vec2 tileIndex = floor(gl_FragCoord.xy / tileSize);
         vec2 tiledCoord = mod(gl_FragCoord.xy, tileSize);
         float xNorm = tiledCoord.x / tileSize.x;
+        float yNorm = tiledCoord.y / tileSize.y;
         float scale = (tileSize.x + tileSize.y) * 0.5;
         vec2 uv = (tiledCoord - tileSize * 0.5) / scale;
+        float rot = random(tileIndex) * 2.0 * PI;
+        uv = vec2(uv.x * cos(rot) - uv.y * sin(rot),
+                  uv.x * sin(rot) + uv.y * cos(rot));
         
         vec3 color = vec3(0.0);
         float maxZ = -2.0;
 
+//        float effect = 0.3;
+            float effect = (yNorm + 0.8) * 0.2;
+//            float effect = (xNorm + 0.8) * 0.2;
+        
+        float phaseStep = 2.0 * PI / float(COUNT);
+        float angleBase = uv.x * 10.0 - iTime * 0.7;
+        
         for (int i = 1; i <= COUNT; i++) {
-            float angle = uv.x * 10.0 - uv.y * 0.0 - iTime * 0.1;
-            float phase_i = float(i) * 2.0 * PI / float(COUNT);
+            float angle = angleBase;
+            float phase_i = float(i) * phaseStep;
             angle += phase_i;
             
-//            float effect = 0.3;
-            float effect = (xNorm + 0.8) * 0.2;
             
             float lineY = sin(angle) * effect;
             float dist  = abs(uv.y - lineY);
@@ -44,7 +54,7 @@ const fragmentShader = /*language=GLSL*/ `
 
             // dynamic size
             float sizeZ = SIZE * (1.0 + lineZ * 0.8);
-            float slope = cos(angle) * 10.0 * effect;
+            float slope = lineZ * 10.0 * effect;
             float effectiveSize = sizeZ * sqrt(1.0 + slope * slope);
 
             float colorY = (1.0 - step(effectiveSize, dist));
