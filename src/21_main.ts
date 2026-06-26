@@ -13,16 +13,18 @@ const fragmentShader = /*language=GLSL*/ `
     const int COUNT = 10;
     const float SIZE = 0.009;
     const float PI = 3.14159;
+    const float TILES = 2.0;
 
     float random(in vec2 _st) {
         return fract(sin(dot(_st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
     }
 
     void main() {
-        float xNorm = gl_FragCoord.x / iResolution.x;
-        float scale = (iResolution.x + iResolution.y) * 0.5;
-        vec2 uv = (gl_FragCoord.xy - iResolution.xy * 0.5) / scale;
-//        uv = mod(uv * 1.0, vec2(0.25, 0.25));
+        vec2 tileSize = iResolution.xy / TILES;
+        vec2 tiledCoord = mod(gl_FragCoord.xy, tileSize);
+        float xNorm = tiledCoord.x / tileSize.x;
+        float scale = (tileSize.x + tileSize.y) * 0.5;
+        vec2 uv = (tiledCoord - tileSize * 0.5) / scale;
         
         vec3 color = vec3(0.0);
         float maxZ = -2.0;
