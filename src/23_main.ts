@@ -41,7 +41,16 @@ function createGGeometry(): THREE.BufferGeometry {
 const cardGeo = createGGeometry();
 
 function createCardMaterial(): THREE.MeshStandardMaterial {
-    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+    const mat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        side: THREE.DoubleSide,
+        transparent: true,
+        roughness: 0.8,
+        metalness: 1,
+        // wireframe: true,
+        emissive: 0x000000,
+        emissiveIntensity: 1,
+    });
     mat.onBeforeCompile = (shader) => {
         shader.uniforms.uBend = { value: 0 };
         shader.vertexShader = 'uniform float uBend;\n' + shader.vertexShader;
@@ -101,20 +110,20 @@ scene.add(rightGroup);
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
 scene.add(ambientLight);
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1.3);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 2.3);
 directionalLight.position.set(0, -2, 10);
 directionalLight.castShadow = true;
 directionalLight.shadow.normalBias = 0.005;
 scene.add(directionalLight);
 
-const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
-directionalLight2.position.set(0, -10, -2);
+const directionalLight2 = new THREE.DirectionalLight(0xffffff, 1.3);
+directionalLight2.position.set(0, -20, -10);
 directionalLight2.shadow.bias = -0.0001;
-directionalLight.shadow.normalBias = 0.005;
+directionalLight2.shadow.normalBias = 0.005;
 scene.add(directionalLight2);
 
-const orangeLight = new THREE.PointLight(0xff6600, 10.5, 0.9, 0.1);
-orangeLight.position.set(0, 0.1, 0.6);
+const orangeLight = new THREE.PointLight(0xff6600, 10.5, 2.3);
+orangeLight.position.set(0, 0.1, 1.6);
 scene.add(orangeLight);
 
 const orangeLight2 = new THREE.PointLight(0xff0000, 1.5, 0.9);
@@ -132,11 +141,11 @@ function animate(time: number) {
 
     const maxSin = Math.max(Math.sin(t), 0);
 
-    setBend(leftCards.at(-1)!, maxSin * 0.9);
+    setBend(leftCards.at(-1)!, maxSin * 1.1);
     setBend(leftCards.at(-2)!, maxSin * 0.6);
     setBend(leftCards.at(-3)!, maxSin * 0.3);
 
-    setBend(rightCards.at(-1)!, maxSin * 0.9);
+    setBend(rightCards.at(-1)!, maxSin * 1.1);
     setBend(rightCards.at(-2)!, maxSin * 0.6);
     setBend(rightCards.at(-3)!, maxSin * 0.3);
 
