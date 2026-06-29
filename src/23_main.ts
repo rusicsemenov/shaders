@@ -3,6 +3,10 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const scene = new THREE.Scene();
+
+scene.background = new THREE.Color(0xffffff);
+scene.fog = new THREE.Fog(0xffffff, 3, 4);
+
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
 camera.position.set(0, -3, 1);
 // camera.position.set(0, -10, 1);
@@ -90,22 +94,20 @@ rightGroup.rotateZ((2 * Math.PI) / 3 + Math.PI * 0.08);
 rightGroup.position.set(1.8, -1.3, 0);
 scene.add(rightGroup);
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.1);
 scene.add(ambientLight);
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-directionalLight.position.set(0, -5, 2);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1.3);
+directionalLight.position.set(0, 2, 3);
 scene.add(directionalLight);
 
-const helper1 = new THREE.DirectionalLightHelper(directionalLight, 2, 0xffffff);
-scene.add(helper1);
-
-const orangeLight = new THREE.PointLight(0xff6600, 3, 6);
-orangeLight.position.set(0, 0, 0.7);
+const orangeLight = new THREE.PointLight(0xff6600, 2.5, 2.6);
+orangeLight.position.set(0, -0.8, 1.8);
 scene.add(orangeLight);
 
-const helper2 = new THREE.PointLightHelper(orangeLight, 1, 0xff6600);
-scene.add(helper2);
+const orangeLight2 = new THREE.PointLight(0xff0000, 0.5, 1.9);
+orangeLight2.position.set(0, -0.2, 0.5);
+scene.add(orangeLight2);
 
 function setBend(card: CardData, value: number) {
     if (card.mat.userData.shader) {
