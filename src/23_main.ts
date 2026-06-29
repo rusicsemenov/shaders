@@ -141,13 +141,14 @@ function animate(time: number) {
 
     const maxSin = Math.max(Math.sin(t), 0);
 
-    setBend(leftCards.at(-1)!, maxSin * 1.1);
-    setBend(leftCards.at(-2)!, maxSin * 0.6);
-    setBend(leftCards.at(-3)!, maxSin * 0.3);
+    const staticCount = 4;
+    const bendable = leftCards.length - staticCount;
 
-    setBend(rightCards.at(-1)!, maxSin * 1.1);
-    setBend(rightCards.at(-2)!, maxSin * 0.6);
-    setBend(rightCards.at(-3)!, maxSin * 0.3);
+    for (let i = staticCount; i < leftCards.length; i++) {
+        const factor = (i - staticCount + 1) / bendable;
+        setBend(leftCards[i], maxSin * factor * 1.1);
+        setBend(rightCards[i], maxSin * factor * 1.1);
+    }
 
     renderer.render(scene, camera);
 }
