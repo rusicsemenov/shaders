@@ -4,7 +4,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(-5, 0, 5);
+camera.position.set(0, -3, 1);
+// camera.position.set(0, -10, 1);
 camera.lookAt(0, 0, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -18,10 +19,8 @@ window.addEventListener('resize', () => {
     camera.updateProjectionMatrix();
 });
 
-// Г-shape: horizontal arm x=-2..0 y=0..0.4, vertical arm x=-2..-1.6 y=-1.6..0
-// Two BoxGeometries with interior subdivisions merged into one
 function createGGeometry(): THREE.BufferGeometry {
-    const depth = 0.08;
+    const depth = 0.03;
     const S = 16; // segments
 
     const hArm = new THREE.BoxGeometry(2, 0.4, depth, S, 4, 1);
@@ -44,12 +43,15 @@ function createCardMaterial(): THREE.MeshStandardMaterial {
             '#include <begin_vertex>',
             `
             #include <begin_vertex>
-            // circular-arc bend in XZ plane: horizontal arm curves from lying flat to pointing up
-            float s = max(0.0, -position.x);
+            // diagonal bend: decompose XY into spine direction d and perpendicular p
+            vec2 d = normalize(vec2(-1.0, 1.0));
+            vec2 p = vec2(-d.y, d.x);
+            float s = max(0.0, dot(position.xy, d));
+            float perp = dot(position.xy, p);
             float theta = (s / 2.0) * uBend;
             float R_sin   = abs(uBend) > 0.0001 ? 2.0 * sin(theta) / uBend : s;
             float R_1mCos = abs(uBend) > 0.0001 ? 2.0 * (1.0 - cos(theta)) / uBend : 0.0;
-            transformed.x = -R_sin;
+            transformed.xy = R_sin * d + perp * p;
             transformed.z += R_1mCos;
             `,
         );
@@ -70,31 +72,40 @@ function createStack(count: number): { group: THREE.Group; cards: CardData[] } {
     for (let i = 0; i < count; i++) {
         const mat = createCardMaterial();
         const mesh = new THREE.Mesh(cardGeo, mat);
-        mesh.position.z = i * 0.06;
+        mesh.position.z = i * 0.04;
         group.add(mesh);
         cards.push({ mesh, mat });
     }
     return { group, cards };
 }
 
-const { group: leftGroup, cards: leftCards } = createStack(1);
+const { group: leftGroup, cards: leftCards } = createStack(12);
+leftGroup.rotateZ((-2 * Math.PI) / 3 - Math.PI * 0.08);
+leftGroup.position.set(-1.8, -1.3, 0);
 scene.add(leftGroup);
 
 const { group: rightGroup, cards: rightCards } = createStack(12);
 rightGroup.scale.x = -1.0; // mirror horizontally
-rightGroup.position.x = 0.5;
-// scene.add(rightGroup);
+rightGroup.rotateZ((2 * Math.PI) / 3 + Math.PI * 0.08);
+rightGroup.position.set(1.8, -1.3, 0);
+scene.add(rightGroup);
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
 scene.add(ambientLight);
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
-directionalLight.position.set(0, 5, 5);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+directionalLight.position.set(0, -5, 2);
 scene.add(directionalLight);
 
+const helper1 = new THREE.DirectionalLightHelper(directionalLight, 2, 0xffffff);
+scene.add(helper1);
+
 const orangeLight = new THREE.PointLight(0xff6600, 3, 6);
-orangeLight.position.set(0, 0, 1);
+orangeLight.position.set(0, 0, 0.7);
 scene.add(orangeLight);
+
+const helper2 = new THREE.PointLightHelper(orangeLight, 1, 0xff6600);
+scene.add(helper2);
 
 function setBend(card: CardData, value: number) {
     if (card.mat.userData.shader) {
@@ -105,10 +116,15 @@ function setBend(card: CardData, value: number) {
 function animate(time: number) {
     const t = time / 1000;
 
-    setBend(leftCards.at(-1)!, Math.sin(t) * 0.8);
-    // setBend(leftCards.at(-2)!, Math.sin(t) * 0.3);
-    // setBend(rightCards.at(-1)!, Math.sin(t) * 0.6);
-    // setBend(rightCards.at(-2)!, Math.sin(t) * 0.3);
+    const maxSin = Math.max(Math.sin(t), 0);
+
+    setBend(leftCards.at(-1)!, maxSin * 0.9);
+    setBend(leftCards.at(-2)!, maxSin * 0.6);
+    setBend(leftCards.at(-3)!, maxSin * 0.3);
+
+    setBend(rightCards.at(-1)!, maxSin * 0.9);
+    setBend(rightCards.at(-2)!, maxSin * 0.6);
+    setBend(rightCards.at(-3)!, maxSin * 0.3);
 
     renderer.render(scene, camera);
 }
