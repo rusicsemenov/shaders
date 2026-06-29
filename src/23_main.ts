@@ -19,6 +19,11 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.querySelector('#app')?.appendChild(renderer.domElement);
 
+const overlay = document.createElement('div');
+overlay.textContent = 'Engineering Impact';
+overlay.classList.add('overlay');
+document.body.appendChild(overlay);
+
 window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -147,6 +152,7 @@ function setBend(card: CardData, value: number) {
 const params = {
     background: '#ffffff',
     fog: '#ffffff',
+    textColor: '#111111',
     color: '#ffffff',
     transparent: true,
     roughness: 0.8,
@@ -167,6 +173,9 @@ gui.addColor(params, 'background').onChange(() => {
 });
 gui.addColor(params, 'fog').onChange(() => {
     (scene.fog as THREE.Fog).color.set(params.fog);
+});
+gui.addColor(params, 'textColor').onChange(() => {
+    overlay.style.color = params.textColor;
 });
 const matFolder = gui.addFolder('Material');
 matFolder.addColor(params, 'color').onChange(() => {
