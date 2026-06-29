@@ -13,7 +13,6 @@ const geometry = new THREE.PlaneGeometry(10, 10, 100, 100);
 
 const vertexShader = `
     uniform float iTime;
-    
         
     void main() {
         vec3 pos = position;
