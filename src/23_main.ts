@@ -5,11 +5,10 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 const scene = new THREE.Scene();
 
 scene.background = new THREE.Color(0xffffff);
-scene.fog = new THREE.Fog(0xffffff, 3.5, 5.2);
+scene.fog = new THREE.Fog(0xffffff, 2.5, 4.5);
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(0, -4, 1);
-// camera.position.set(0, -10, 1);
+camera.position.set(-1, -4, 2);
 camera.lookAt(0, 0, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -48,8 +47,8 @@ function createCardMaterial(): THREE.MeshStandardMaterial {
         roughness: 0.8,
         metalness: 1,
         // wireframe: true,
-        emissive: 0x000000,
-        emissiveIntensity: 1,
+        // emissive: 0x000000,
+        // emissiveIntensity: 1,
     });
     mat.onBeforeCompile = (shader) => {
         shader.uniforms.uBend = { value: 0 };
@@ -102,7 +101,7 @@ leftGroup.position.set(-1.73, -1.3, 0);
 scene.add(leftGroup);
 
 const { group: rightGroup, cards: rightCards } = createStack(12);
-rightGroup.scale.x = -1.0; // mirror horizontally
+rightGroup.scale.x = -1; // mirror horizontally
 rightGroup.rotateZ((2 * Math.PI) / 3 + Math.PI * 0.08);
 rightGroup.position.set(1.73, -1.3, 0);
 scene.add(rightGroup);
@@ -136,16 +135,32 @@ function setBend(card: CardData, value: number) {
     }
 }
 
+let cameraAzimuth = Math.atan2(-1, -1);
+let lastT = 0;
+
 function animate(time: number) {
     const t = time / 1000;
+    const dt = t - lastT;
+    lastT = t;
 
-    const maxSin = Math.max(Math.sin(t), 0);
+    const angularSpeed = 0.3 + 0.2 * Math.sin(t * 0.4) + 0.08 * Math.sin(t * 1.1 + 1.2);
+    cameraAzimuth += angularSpeed * dt;
 
-    const staticCount = 4;
+    const polar = 2.3 + 0.25 * Math.sin(t * 0.37);
+    const radius = 3.2;
+    camera.position.x = radius * Math.sin(polar) * Math.sin(cameraAzimuth);
+    camera.position.y = radius * Math.cos(polar);
+    camera.position.z = radius * Math.sin(polar) * Math.cos(cameraAzimuth);
+    camera.lookAt(0, 0, 0);
+
+    const maxSin = Math.sin(t);
+
+    const staticCount = 0;
     const bendable = leftCards.length - staticCount;
 
     for (let i = staticCount; i < leftCards.length; i++) {
-        const factor = (i - staticCount + 1) / bendable;
+        const pos = i - staticCount;
+        const factor = maxSin >= 0 ? (pos + 1) / bendable : (bendable - pos) / bendable;
         setBend(leftCards[i], maxSin * factor * 1.1);
         setBend(rightCards[i], maxSin * factor * 1.1);
     }
