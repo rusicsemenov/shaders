@@ -1,6 +1,7 @@
 import './style.css';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 
 const scene = new THREE.Scene();
 
@@ -125,15 +126,85 @@ const orangeLight = new THREE.PointLight(0xff6600, 10.5, 2.3);
 orangeLight.position.set(0, 0.1, 1.6);
 scene.add(orangeLight);
 
-const orangeLight2 = new THREE.PointLight(0xff0000, 1.5, 0.9);
+const orangeLight2 = new THREE.PointLight(0xff0000, 10.5, 0.9);
 orangeLight2.position.set(0, -0.3, 0.5);
 scene.add(orangeLight2);
+
+const orangeLight3 = new THREE.PointLight(0xffffff, 2.5);
+orangeLight3.position.set(0, 0, -1);
+scene.add(orangeLight3);
+
+const orangeLight4 = new THREE.PointLight(0xff0000, 10.5, 0.9);
+orangeLight4.position.set(1, -1.3, -0.5);
+scene.add(orangeLight4);
 
 function setBend(card: CardData, value: number) {
     if (card.mat.userData.shader) {
         card.mat.userData.shader.uniforms.uBend.value = value;
     }
 }
+
+const params = {
+    background: '#ffffff',
+    fog: '#ffffff',
+    color: '#ffffff',
+    transparent: true,
+    roughness: 0.8,
+    metalness: 1.0,
+    wireframe: false,
+    emissive: '#000000',
+    emissiveIntensity: 1.0,
+    baseSpeed: 0.3,
+    speedAmp: 0.2,
+    radius: 3.2,
+};
+
+const allCards = () => [...leftCards, ...rightCards];
+
+const gui = new GUI();
+gui.addColor(params, 'background').onChange(() => {
+    (scene.background as THREE.Color).set(params.background);
+});
+gui.addColor(params, 'fog').onChange(() => {
+    (scene.fog as THREE.Fog).color.set(params.fog);
+});
+const matFolder = gui.addFolder('Material');
+matFolder.addColor(params, 'color').onChange(() => {
+    allCards().forEach((c) => c.mat.color.set(params.color));
+});
+matFolder.add(params, 'transparent').onChange(() => {
+    allCards().forEach((c) => {
+        c.mat.transparent = params.transparent;
+        c.mat.needsUpdate = true;
+    });
+});
+matFolder.add(params, 'roughness', 0, 1, 0.01).onChange(() => {
+    allCards().forEach((c) => {
+        c.mat.roughness = params.roughness;
+    });
+});
+matFolder.add(params, 'metalness', 0, 1, 0.01).onChange(() => {
+    allCards().forEach((c) => {
+        c.mat.metalness = params.metalness;
+    });
+});
+matFolder.add(params, 'wireframe').onChange(() => {
+    allCards().forEach((c) => {
+        c.mat.wireframe = params.wireframe;
+    });
+});
+matFolder.addColor(params, 'emissive').onChange(() => {
+    allCards().forEach((c) => c.mat.emissive.set(params.emissive));
+});
+matFolder.add(params, 'emissiveIntensity', 0, 5, 0.01).onChange(() => {
+    allCards().forEach((c) => {
+        c.mat.emissiveIntensity = params.emissiveIntensity;
+    });
+});
+const camFolder = gui.addFolder('Camera');
+camFolder.add(params, 'baseSpeed', 0, 1, 0.01);
+camFolder.add(params, 'speedAmp', 0, 0.5, 0.01);
+camFolder.add(params, 'radius', 1, 8, 0.1);
 
 let cameraAzimuth = Math.atan2(-1, -1);
 let lastT = 0;
@@ -143,11 +214,12 @@ function animate(time: number) {
     const dt = t - lastT;
     lastT = t;
 
-    const angularSpeed = 0.3 + 0.2 * Math.sin(t * 0.4) + 0.08 * Math.sin(t * 1.1 + 1.2);
+    const angularSpeed =
+        params.baseSpeed + params.speedAmp * Math.sin(t * 0.4) + 0.08 * Math.sin(t * 1.1 + 1.2);
     cameraAzimuth += angularSpeed * dt;
 
     const polar = 2.3 + 0.25 * Math.sin(t * 0.37);
-    const radius = 3.2;
+    const radius = params.radius;
     camera.position.x = radius * Math.sin(polar) * Math.sin(cameraAzimuth);
     camera.position.y = radius * Math.cos(polar);
     camera.position.z = radius * Math.sin(polar) * Math.cos(cameraAzimuth);
