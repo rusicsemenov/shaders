@@ -5,16 +5,18 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 const scene = new THREE.Scene();
 
 scene.background = new THREE.Color(0xffffff);
-scene.fog = new THREE.Fog(0xffffff, 3, 4);
+scene.fog = new THREE.Fog(0xffffff, 3.5, 5.2);
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(0, -3, 1);
+camera.position.set(0, -4, 1);
 // camera.position.set(0, -10, 1);
 camera.lookAt(0, 0, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setAnimationLoop(animate);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.querySelector('#app')?.appendChild(renderer.domElement);
 
 window.addEventListener('resize', () => {
@@ -24,7 +26,7 @@ window.addEventListener('resize', () => {
 });
 
 function createGGeometry(): THREE.BufferGeometry {
-    const depth = 0.03;
+    const depth = 0.022;
     const S = 16; // segments
 
     const hArm = new THREE.BoxGeometry(2, 0.4, depth, S, 4, 1);
@@ -76,7 +78,9 @@ function createStack(count: number): { group: THREE.Group; cards: CardData[] } {
     for (let i = 0; i < count; i++) {
         const mat = createCardMaterial();
         const mesh = new THREE.Mesh(cardGeo, mat);
-        mesh.position.z = i * 0.04;
+        mesh.position.z = i * 0.03;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
         group.add(mesh);
         cards.push({ mesh, mat });
     }
@@ -85,28 +89,36 @@ function createStack(count: number): { group: THREE.Group; cards: CardData[] } {
 
 const { group: leftGroup, cards: leftCards } = createStack(12);
 leftGroup.rotateZ((-2 * Math.PI) / 3 - Math.PI * 0.08);
-leftGroup.position.set(-1.8, -1.3, 0);
+leftGroup.position.set(-1.73, -1.3, 0);
 scene.add(leftGroup);
 
 const { group: rightGroup, cards: rightCards } = createStack(12);
 rightGroup.scale.x = -1.0; // mirror horizontally
 rightGroup.rotateZ((2 * Math.PI) / 3 + Math.PI * 0.08);
-rightGroup.position.set(1.8, -1.3, 0);
+rightGroup.position.set(1.73, -1.3, 0);
 scene.add(rightGroup);
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.1);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
 scene.add(ambientLight);
 
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1.3);
-directionalLight.position.set(0, 2, 3);
+directionalLight.position.set(0, -2, 10);
+directionalLight.castShadow = true;
+directionalLight.shadow.normalBias = 0.005;
 scene.add(directionalLight);
 
-const orangeLight = new THREE.PointLight(0xff6600, 2.5, 2.6);
-orangeLight.position.set(0, -0.8, 1.8);
+const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+directionalLight2.position.set(0, -10, -2);
+directionalLight2.shadow.bias = -0.0001;
+directionalLight.shadow.normalBias = 0.005;
+scene.add(directionalLight2);
+
+const orangeLight = new THREE.PointLight(0xff6600, 10.5, 0.9, 0.1);
+orangeLight.position.set(0, 0.1, 0.6);
 scene.add(orangeLight);
 
-const orangeLight2 = new THREE.PointLight(0xff0000, 0.5, 1.9);
-orangeLight2.position.set(0, -0.2, 0.5);
+const orangeLight2 = new THREE.PointLight(0xff0000, 1.5, 0.9);
+orangeLight2.position.set(0, -0.3, 0.5);
 scene.add(orangeLight2);
 
 function setBend(card: CardData, value: number) {
