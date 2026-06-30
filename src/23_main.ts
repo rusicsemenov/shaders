@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 
+// https://www.globallogic.com
+
 const scene = new THREE.Scene();
 
 scene.background = new THREE.Color(0xffffff);
