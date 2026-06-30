@@ -12,9 +12,6 @@ class Point {
     maxDelta: number;
     velocity: number;
     step: number;
-    newX: number;
-    newY: number;
-    newZ: number;
 
     constructor(x: number, y: number, z: number, maxDelta: number) {
         this.originX = x;
@@ -23,7 +20,6 @@ class Point {
         this.maxDelta = maxDelta;
         this.velocity = 0;
         this.step = 0.1;
-        this.newX = this.newY = this.newZ = 0;
     }
 
     setVelocity(val: number) {
@@ -36,17 +32,18 @@ class Point {
             : (Math.cos(time * 0.01 + index / 2) / delta) * this.maxDelta;
     }
 
-    update(time: number, index: number, posNow: THREE.Vector3) {
+    update(time: number, index: number, positions: Float32Array): void {
+        const i3 = index * 3;
         if (this.velocity > 0) {
-            this.newX = this.randomDirection(time, index);
-            this.newY = this.randomDirection(time, index);
-            this.newZ = this.randomDirection(time, index);
+            positions[i3]     += this.randomDirection(time, index);
+            positions[i3 + 1] += this.randomDirection(time, index);
+            positions[i3 + 2] += this.randomDirection(time, index);
             this.velocity -= 0.05;
             if (this.velocity < 0) this.velocity = 0;
         } else {
-            this.newX = (this.originX - posNow.x) * this.step;
-            this.newY = (this.originY - posNow.y) * this.step;
-            this.newZ = (this.originZ - posNow.z) * this.step;
+            positions[i3]     += (this.originX - positions[i3])     * this.step;
+            positions[i3 + 1] += (this.originY - positions[i3 + 1]) * this.step;
+            positions[i3 + 2] += (this.originZ - positions[i3 + 2]) * this.step;
         }
     }
 }
@@ -102,10 +99,14 @@ window.addEventListener('touchend', () => {
     mouse.set(-size, -size);
 });
 
-document.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    camera.position.z += e.deltaY * 0.1;
-}, { passive: false });
+document.addEventListener(
+    'wheel',
+    (e) => {
+        e.preventDefault();
+        camera.position.z += e.deltaY * 0.1;
+    },
+    { passive: false },
+);
 
 // ─── Load image → extract pixel positions ────────────────────────────────────
 
@@ -139,13 +140,13 @@ img.onload = () => {
         const [px, py] = imageCoords[i];
         const pz = Math.sin(i / 10) * delta;
 
-        positions[i * 3]     = px;
+        positions[i * 3] = px;
         positions[i * 3 + 1] = py;
         positions[i * 3 + 2] = pz;
 
         const hue = (i * 10 + 100) % 360;
         const color = new THREE.Color(`hsl(${hue}, 100%, 50%)`);
-        colors[i * 3]     = color.r;
+        colors[i * 3] = color.r;
         colors[i * 3 + 1] = color.g;
         colors[i * 3 + 2] = color.b;
 
@@ -154,7 +155,7 @@ img.onload = () => {
 
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color',    new THREE.BufferAttribute(colors, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
     const material = new THREE.PointsMaterial({
         vertexColors: true,
@@ -169,7 +170,6 @@ img.onload = () => {
     scene.add(pointField);
 
     const posAttr = geometry.attributes.position as THREE.BufferAttribute;
-    const posNow = new THREE.Vector3();
 
     const maxRotX = 1;
     const maxRotY = 1;
@@ -177,8 +177,10 @@ img.onload = () => {
     let deltaRotY = 0.001;
 
     renderer.setAnimationLoop((time) => {
-        if (pointField.rotation.x > maxRotX || pointField.rotation.x < -maxRotX) deltaRotX = -deltaRotX;
-        if (pointField.rotation.y > maxRotY || pointField.rotation.y < -maxRotY) deltaRotY = -deltaRotY;
+        if (pointField.rotation.x > maxRotX || pointField.rotation.x < -maxRotX)
+            deltaRotX = -deltaRotX;
+        if (pointField.rotation.y > maxRotY || pointField.rotation.y < -maxRotY)
+            deltaRotY = -deltaRotY;
 
         pointField.rotation.x += deltaRotX;
         pointField.rotation.y += deltaRotY;
@@ -190,12 +192,7 @@ img.onload = () => {
         }
 
         for (let i = 0; i < count; i++) {
-            posNow.set(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
-            points[i].update(time, i, posNow);
-
-            positions[i * 3]     += points[i].newX;
-            positions[i * 3 + 1] += points[i].newY;
-            positions[i * 3 + 2] += points[i].newZ;
+            points[i].update(time, i, positions);
         }
 
         posAttr.needsUpdate = true;
