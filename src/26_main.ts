@@ -8,13 +8,13 @@ const SPHERE_RADIUS = 3.5;
 
 const params = {
     background: '#050508',
-    transparentBg: false,
+    backgroundMode: 'live' as 'color' | 'transparent' | 'live',
     sphereScale: 1,
-    metalness: 0.9,
-    roughness: 0.2,
-    color: '#ffd700',
-    emissive: '#000000',
-    emissiveIntensity: 0,
+    metalness: 0.8,
+    roughness: 0.43,
+    color: '#ffffff',
+    emissive: '#ffffff',
+    emissiveIntensity: 0.1,
     wireframe: false,
     colorMode: 'gold' as 'gold' | 'random',
     transitionDuration: 4,
@@ -274,16 +274,69 @@ const dirLight2 = new THREE.DirectionalLight(0xaabbff, 1.5);
 dirLight2.position.set(-1, -0.5, -1);
 scene.add(dirLight2);
 
+// ─── Live background ─────────────────────────────────────────────────────────
+
+const bgUniforms = { iTime: { value: 0 } };
+
+const bgMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(2, 2),
+    new THREE.ShaderMaterial({
+        depthTest: false,
+        depthWrite: false,
+        uniforms: bgUniforms,
+        vertexShader: /*glsl*/ `
+            varying vec2 vUv;
+            void main() {
+                vUv = position.xy * 0.5 + 0.5;
+                gl_Position = vec4(position.xy, 1.0, 1.0);
+            }
+        `,
+        fragmentShader: /*glsl*/ `
+            varying vec2 vUv;
+            uniform float iTime;
+            void main() {
+                vec2 uv = vUv;
+
+                // Hotspot: bottom-left studio light, gently breathing
+                float hot = pow(max(0.0, 1.0 - length(uv - vec2(0.12, 0.18)) * 1.9), 1.8);
+                hot *= 0.82 + 1.18 * sin(iTime * 0.35);
+
+                // Diagonal gradient: orange-left → dark red top-right
+                float t = clamp(uv.x * 0.6 + (1.0 - uv.y) * 0.4, 0.0, 1.0);
+                vec3 col = mix(vec3(0.82, 0.28, 0.02), vec3(0.40, 0.06, 0.01), t);
+
+                // Hotspot colour
+                col = mix(col, vec3(1.0, 0.84, 0.18), hot);
+
+                // Floor: warm reflected light at the bottom
+                float floor = smoothstep(0.32, 0.0, uv.y);
+                col = mix(col, vec3(0.88, 0.48, 0.04), floor * 0.38);
+
+                gl_FragColor = vec4(col, 1.0);
+            }
+        `,
+    }),
+);
+bgMesh.frustumCulled = false;
+bgMesh.renderOrder = -1;
+bgMesh.visible = true;
+scene.add(bgMesh);
+
+function applyBackgroundMode(mode: string) {
+    bgMesh.visible = mode === 'live';
+    scene.background = mode === 'color' ? new THREE.Color(params.background) : null;
+}
+
+applyBackgroundMode(params.backgroundMode);
+
 // ─── GUI ─────────────────────────────────────────────────────────────────────
 
 const gui = new GUI();
-gui.add(params, 'transparentBg')
-    .name('transparent bg')
-    .onChange((v: boolean) => {
-        scene.background = v ? null : new THREE.Color(params.background);
-    });
+gui.add(params, 'backgroundMode', ['color', 'transparent', 'live'])
+    .name('background')
+    .onChange(applyBackgroundMode);
 gui.addColor(params, 'background').onChange((v: string) => {
-    if (!params.transparentBg) (scene.background as THREE.Color).set(v);
+    if (params.backgroundMode === 'color') (scene.background as THREE.Color).set(v);
 });
 gui.add(params, 'sphereScale', 0.1, 3, 0.05).name('sphere size');
 gui.add(params, 'transitionDuration', 0.5, 10, 0.5).name('transition (s)');
@@ -312,9 +365,11 @@ matFolder
 
 const sphereGeo = new THREE.SphereGeometry(SPHERE_RADIUS, 8, 6);
 const sphereMat = new THREE.MeshStandardMaterial({
-    metalness: 0.9,
-    roughness: 0.2,
-    color: 0xffd700,
+    metalness: params.metalness,
+    roughness: params.roughness,
+    color: params.color,
+    emissive: params.emissive,
+    emissiveIntensity: params.emissiveIntensity,
 });
 
 const mesh = new THREE.InstancedMesh(sphereGeo, sphereMat, N);
@@ -385,6 +440,7 @@ renderer.setAnimationLoop((time) => {
     const dt = lastTime < 0 ? 0 : (time - lastTime) / 1000;
     lastTime = time;
     const t = time / 1000;
+    bgUniforms.iTime.value = t;
 
     // Slow orbit of the lights for dynamic reflections
     light1.position.set(Math.cos(t * 0.3) * 300, Math.sin(t * 0.2) * 200, 250);
