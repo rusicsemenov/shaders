@@ -2,6 +2,8 @@ import './style.css';
 import * as THREE from 'three';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 
+// https://www.n-ix.com
+
 const N = 1000;
 const RADIUS = 150;
 const SPHERE_RADIUS = 3.5;
