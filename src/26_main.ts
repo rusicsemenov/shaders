@@ -244,11 +244,42 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.querySelector('#app')?.appendChild(renderer.domElement);
 
-window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+// applyLayout is defined below, after mesh is created
+
+// ─── Text overlay ────────────────────────────────────────────────────────────
+
+const overlay = document.createElement('div');
+overlay.innerHTML = `
+    <h1>Pragmatic AI Software Engineering</h1>
+    <h3>N-iX helps enterprises turn AI investment into measurable engineering results,
+    backed by 24 years of software, cloud, data, and security delivery.</h3>
+`;
+Object.assign(overlay.style, {
+    position: 'fixed',
+    top: '50%',
+    right: '6%',
+    transform: 'translateY(-50%)',
+    width: '48%',
+    color: 'rgba(255,255,255,0.92)',
+    fontFamily: 'system-ui, sans-serif',
+    pointerEvents: 'none',
+    textAlign: 'right',
 });
+Object.assign((overlay.querySelector('h1') as HTMLElement).style, {
+    margin: '0 0 0.5em',
+    fontSize: 'clamp(1.4rem, 2.6vw, 2.8rem)',
+    fontWeight: '700',
+    lineHeight: '1.35',
+    letterSpacing: '-0.01em',
+});
+Object.assign((overlay.querySelector('h3') as HTMLElement).style, {
+    margin: '0',
+    fontSize: 'clamp(0.85rem, 1.2vw, 1.15rem)',
+    fontWeight: '600',
+    lineHeight: '1.6',
+    opacity: '0.78',
+});
+document.body.appendChild(overlay);
 
 // ─── Lighting ─────────────────────────────────────────────────────────────────
 
@@ -332,6 +363,7 @@ applyBackgroundMode(params.backgroundMode);
 // ─── GUI ─────────────────────────────────────────────────────────────────────
 
 const gui = new GUI();
+gui.close();
 gui.add(params, 'backgroundMode', ['color', 'transparent', 'live'])
     .name('background')
     .onChange(applyBackgroundMode);
@@ -402,6 +434,27 @@ for (let i = 0; i < N; i++) {
 }
 
 baseColors.set(goldColors);
+
+// ─── Layout ───────────────────────────────────────────────────────────────────
+
+function applyLayout() {
+    const mobile = window.innerWidth < 768;
+
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    Object.assign(overlay.style, {
+        width: mobile ? '90%' : '38%',
+        right: mobile ? '5%' : '6%',
+        textAlign: mobile ? 'center' : 'right',
+    });
+
+    mesh.position.x = mobile ? 0 : -120;
+}
+
+applyLayout();
+window.addEventListener('resize', applyLayout);
 
 // ─── Morph state ─────────────────────────────────────────────────────────────
 
