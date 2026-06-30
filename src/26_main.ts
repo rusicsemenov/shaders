@@ -22,6 +22,7 @@ const params = {
     rotSpeedY: 0.003,
     rotSpeedX: 0.001,
     blinkIntensity: 0.95,
+    cameraZ: 400,
 };
 
 function easeInOut(t: number): number {
@@ -237,7 +238,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x050508);
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
-camera.position.z = 400;
+camera.position.z = params.cameraZ;
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -376,6 +377,11 @@ gui.add(params, 'holdDuration', 0, 5, 0.5).name('hold (s)');
 gui.add(params, 'rotSpeedY', 0, 0.02, 0.001).name('rotation Y');
 gui.add(params, 'rotSpeedX', 0, 0.02, 0.001).name('rotation X');
 gui.add(params, 'blinkIntensity', 0, 1, 0.05).name('blink');
+gui.add(params, 'cameraZ', 50, 600, 1)
+    .name('camera Z')
+    .onChange((v: number) => {
+        camera.position.z = v;
+    });
 
 const matFolder = gui.addFolder('Material');
 matFolder.addColor(params, 'color').onChange((v: string) => sphereMat.color.set(v));
