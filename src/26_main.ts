@@ -81,6 +81,35 @@ function generateCube(n: number): Float32Array {
     return pos;
 }
 
+function generateCube2(n: number): Float32Array {
+    const pos = new Float32Array(n * 3);
+    const s = RADIUS * 0.7;
+    for (let i = 0; i < n; i++) {
+        pos[i * 3] = (Math.random() - 0.5) * 2 * s;
+        pos[i * 3 + 1] = (Math.random() - 0.5) * 2 * s;
+        pos[i * 3 + 2] = (Math.random() - 0.5) * 2 * s;
+    }
+    return pos;
+}
+
+function generateCubeGrid(n: number): Float32Array {
+    const pos = new Float32Array(n * 3);
+    const s = RADIUS * 0.7;
+    const k = Math.round(Math.cbrt(n)); // grid divisions per axis
+    const total = k * k * k;
+
+    for (let i = 0; i < n; i++) {
+        const idx = i < total ? i : total - 1; // extra points stack on last slot
+        const iz = Math.floor(idx / (k * k));
+        const iy = Math.floor((idx % (k * k)) / k);
+        const ix = idx % k;
+        pos[i * 3] = -s + (ix / (k - 1)) * 2 * s;
+        pos[i * 3 + 1] = -s + (iy / (k - 1)) * 2 * s;
+        pos[i * 3 + 2] = -s + (iz / (k - 1)) * 2 * s;
+    }
+    return pos;
+}
+
 function generateHelix(n: number): Float32Array {
     const pos = new Float32Array(n * 3);
     const r = RADIUS * 0.5;
@@ -144,9 +173,9 @@ scene.add(dirLight2);
 
 const sphereGeo = new THREE.SphereGeometry(SPHERE_RADIUS, 8, 6);
 const sphereMat = new THREE.MeshStandardMaterial({
-    metalness: 0.4,
-    roughness: 0.1,
-    color: 0xffffff,
+    metalness: 0.9,
+    roughness: 0.2,
+    color: 0xffd700,
     // wireframe: true,
     // emissive: 0xffffff,
     // emissiveIntensity: 0.5,
@@ -163,7 +192,10 @@ const blinkSpeeds = new Float32Array(N);
 
 const tempColor = new THREE.Color();
 for (let i = 0; i < N; i++) {
-    tempColor.setHSL(i / N, 1.0, 0.6);
+    // Hue 38–50 = deep gold to bright yellow-gold, slight per-sphere variation
+    const hue = (38 + (i % 13)) / 360;
+    const lightness = 0.45 + (i % 7) * 0.03;
+    tempColor.setHSL(hue, 1.0, lightness);
     baseColors[i * 3] = tempColor.r;
     baseColors[i * 3 + 1] = tempColor.g;
     baseColors[i * 3 + 2] = tempColor.b;
@@ -174,7 +206,7 @@ for (let i = 0; i < N; i++) {
 // ─── Morph state ─────────────────────────────────────────────────────────────
 
 const positions = new Float32Array(N * 3);
-const shapeGenerators = [generateCircle, generateSphere, generateCube, generateHelix];
+const shapeGenerators = [generateCircle, generateSphere, generateCube, generateCube2, generateCubeGrid, generateHelix];
 let fromPos = shapeGenerators[0](N);
 let toPos = shapeGenerators[1](N);
 let nextIdx = 2;
@@ -192,7 +224,7 @@ const posVec = new THREE.Vector3();
 const quat = new THREE.Quaternion();
 const scaleVec = new THREE.Vector3(1, 1, 1);
 const blinkColor = new THREE.Color();
-const white = new THREE.Color(1, 1, 1);
+const white = new THREE.Color(1, 0.95, 0.6); // warm gold highlight
 
 // ─── Animation loop ───────────────────────────────────────────────────────────
 
