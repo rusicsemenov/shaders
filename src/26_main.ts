@@ -265,6 +265,7 @@ Object.assign(overlay.style, {
     fontFamily: 'system-ui, sans-serif',
     pointerEvents: 'none',
     textAlign: 'right',
+    userSelect: 'none',
 });
 Object.assign((overlay.querySelector('h1') as HTMLElement).style, {
     margin: '0 0 0.5em',
