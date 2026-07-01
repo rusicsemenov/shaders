@@ -1,6 +1,8 @@
 import './style.css';
 import { ShaderCanvas } from './ShaderCanvas';
 
+// https://gameinspire.com/en
+
 const documentElement = document.documentElement;
 documentElement.style.setProperty('--bg', `#08060d`);
 

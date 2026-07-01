@@ -53,4 +53,5 @@ body {
     font-weight: 700;
     letter-spacing: -0.02em;
     color: #111;
+    user-select: none;
 }

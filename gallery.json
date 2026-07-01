@@ -38,6 +38,23 @@
         "reason": "A proof of concept for rendering rich animated backgrounds across an entire page with a single WebGL context — instead of one canvas per card, scissor testing lets the GPU clip the same shader to each card's bounding rect, keeping memory and overhead minimal."
     },
     {
+        "name": "GameInspire Tunnel Grid",
+        "slug": "gameinspire-bg",
+        "animationUrl": "./gameinspire-bg/",
+        "originalUrl": "https://gameinspire.com/en",
+        "thumbnail": "./gameinspire-bg/preview.webp",
+        "description": "Two curved dot-grid planes — one above and one below the camera — rendered as WebGL point sprites and scrolled toward the viewer in a continuous tunnel. A cylindrical bend compresses the X axis and a per-plane Y curvature arches the grids toward each other. The vertex shader handles perspective projection, near/far/edge alpha falloff, and a slow view-axis rotation. Top dots are cool blue, bottom dots are soft purple, both dimming as they approach the camera.",
+        "tags": [
+            "rawWebGL",
+            "particles",
+            "pointSprites",
+            "vertexShader",
+            "fragmentShader",
+            "tunnel"
+        ],
+        "reason": "Created for GameInspire to provide an immersive live background for their platform — a subtle infinite-tunnel animation in blue and purple tones that conveys depth and forward momentum without distracting from the content. On the site this element is a static image."
+    },
+    {
         "name": "theMultiple Slot Drums",
         "slug": "themultiple",
         "animationUrl": "./themultiple/",

@@ -1,8 +1,18 @@
 import './style.css';
 import { ShaderCanvas } from './ShaderCanvas';
 
+// https://gameinspire.com/en
+
 const documentElement = document.documentElement;
 documentElement.style.setProperty('--bg', `#08060d`);
+
+const overlay = document.createElement('div');
+overlay.textContent = "Let's make your platform more powerful";
+overlay.classList.add('overlay');
+overlay.style.fontSize = '2.5rem';
+overlay.style.letterSpacing = '1.6px';
+overlay.style.color = 'white';
+document.body.appendChild(overlay);
 
 const vertexShader = `
     attribute vec3 position;
