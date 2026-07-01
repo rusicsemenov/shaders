@@ -5,8 +5,9 @@
         "animationUrl": "./globallogic/",
         "originalUrl": "https://www.globallogic.com",
         "thumbnail": "./globallogic/preview.webp",
-        "description": "Two stacks of metallic G-letter cards animated with a custom diagonal-bend vertex shader. The cards flex in a synchronized wave while the camera orbits with variable speed. Dramatic orange and red point lights create depth against a white fog background.",
-        "tags": ["threeJS", "gui", "vertexShader", "geometry", "lighting", "fog"]
+        "description": "Two stacks of metallic cards animated with a custom diagonal-bend vertex shader. The cards flex in a synchronized wave while the camera orbits with variable speed. Dramatic orange and red point lights create depth against a white fog background.",
+        "tags": ["threeJS", "gui", "vertexShader", "geometry", "lighting", "fog"],
+        "reason": "This project was created for GlobalLogic to showcase their brand in a visually engaging way instead of a static image."
     },
     {
         "name": "N-IX Branding Live Background",
@@ -15,14 +16,7 @@
         "originalUrl": "https://www.n-ix.com",
         "thumbnail": "./nix-bg/preview.webp",
         "description": "A visualization of 1,000 metallic spheres (InstancedMesh) that morph between seven geometric shapes — circle, cube, sphere, Perlin-noise terrain, and DNA helix. Features a live procedural background shader with an animated studio hotspot, orbiting colored lights, per-sphere blinking, and full GUI controls for animation, material, and camera.",
-        "tags": [
-            "threeJS",
-            "gui",
-            "instancedMesh",
-            "fragmentShader",
-            "animation",
-            "background",
-            "lighting"
-        ]
+        "tags": ["threeJS", "gui", "instancedMesh", "fragmentShader", "background", "lighting"],
+        "reason": "On the N-IX website, was used 512 images in the dom! To make animation more efficient, I created a live background with 1,000 spheres that morph between seven geometric shapes. The background is procedurally generated and animated in real-time."
     }
 ]
