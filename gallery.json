@@ -14,9 +14,37 @@
         "slug": "n-ix",
         "animationUrl": "./n-ix/",
         "originalUrl": "https://www.n-ix.com",
-        "thumbnail": "./nix-bg/preview.webp",
+        "thumbnail": "./n-ix/preview.webp",
         "description": "A visualization of 1,000 metallic spheres (InstancedMesh) that morph between seven geometric shapes — circle, cube, sphere, Perlin-noise terrain, and DNA helix. Features a live procedural background shader with an animated studio hotspot, orbiting colored lights, per-sphere blinking, and full GUI controls for animation, material, and camera.",
         "tags": ["threeJS", "gui", "instancedMesh", "fragmentShader", "background", "lighting"],
         "reason": "On the N-IX website, was used 512 images in the dom! To make animation more efficient, I created a live background with 1,000 spheres that morph between seven geometric shapes. The background is procedurally generated and animated in real-time."
+    },
+    {
+        "name": "Live Background for any Card",
+        "slug": "themultiple-bg",
+        "animationUrl": "./themultiple-bg/",
+        "originalUrl": "https://themultiple.com",
+        "thumbnail": "./themultiple-bg/preview.webp",
+        "description": "A full landing page where a single fixed WebGL canvas renders live backgrounds inside every card simultaneously using scissor testing — one draw call per card, zero DOM canvases. Each card gets its own coordinate space via uBlockOffset. The shader layers three effects: five slowly drifting bokeh blobs in cyan, blue, and purple; a grid of twinkling static sparkles with per-cell random phase and speed; and 240 perspective-projected flying stars that cycle depth with fract() to create a continuous hyperspace zoom effect.",
+        "tags": [
+            "rawWebGL",
+            "scissorRendering",
+            "particles",
+            "bokeh",
+            "starfield",
+            "fragmentShader",
+            "intersectionObserver"
+        ],
+        "reason": "A proof of concept for rendering rich animated backgrounds across an entire page with a single WebGL context — instead of one canvas per card, scissor testing lets the GPU clip the same shader to each card's bounding rect, keeping memory and overhead minimal."
+    },
+    {
+        "name": "theMultiple Slot Drums",
+        "slug": "themultiple",
+        "animationUrl": "./themultiple/",
+        "originalUrl": "https://themultiple.com",
+        "thumbnail": "./themultiple/preview.webp",
+        "description": "Three spinning slot-machine drums rendered entirely via ray marching signed distance functions — no geometry buffers. Each cylinder hosts six icon panels read from an SVG atlas, shaded with diffuse/specular lighting and glowing cyan torus rings that levitate around each drum. A fish-eye camera and a 10-second animation cycle featuring cubic ease-out deceleration snapping to sector boundaries give the piece a polished, tactile feel.",
+        "tags": ["rayMarching", "sdf", "fragmentShader", "glsl", "gui", "atlas"],
+        "reason": "Created for theMultiple to showcase their brand through an interactive slot-machine metaphor, combining custom SVG logos with geometric symbols on procedurally rendered 3D drums. They have animation on site but it based on image sequence. I created a real-time 3D version with ray marching and signed distance functions."
     }
 ]

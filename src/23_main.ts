@@ -170,6 +170,7 @@ const params = {
 const allCards = () => [...leftCards, ...rightCards];
 
 const gui = new GUI();
+gui.close();
 gui.addColor(params, 'background').onChange(() => {
     (scene.background as THREE.Color).set(params.background);
 });
