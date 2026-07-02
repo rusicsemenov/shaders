@@ -63,5 +63,14 @@
         "description": "Three spinning slot-machine drums rendered entirely via ray marching signed distance functions — no geometry buffers. Each cylinder hosts six icon panels read from an SVG atlas, shaded with diffuse/specular lighting and glowing cyan torus rings that levitate around each drum. A fish-eye camera and a 10-second animation cycle featuring cubic ease-out deceleration snapping to sector boundaries give the piece a polished, tactile feel.",
         "tags": ["rayMarching", "sdf", "fragmentShader", "glsl", "gui", "atlas"],
         "reason": "Created for theMultiple to showcase their brand through an interactive slot-machine metaphor, combining custom SVG logos with geometric symbols on procedurally rendered 3D drums. They have animation on site but it based on image sequence. I created a real-time 3D version with ray marching and signed distance functions."
+    },
+    {
+        "name": "Reactive Particle Image",
+        "slug": "particle-image",
+        "animationUrl": "./particle-image/",
+        "thumbnail": "./particle-image/preview.webp",
+        "description": "A PNG's alpha channel is sampled pixel-by-pixel to place a THREE.Points cloud, one particle per opaque pixel, colored with a scrolling HSL rainbow or a solid custom color. A raycaster tracks the mouse/touch position (auto-disabled after 150ms idle or on leaving the window) and gives nearby particles a velocity impulse, scattering them before they ease back to their origin coordinates. The whole field slowly rocks on two axes, and a GUI lets you swap in any image URL live.",
+        "tags": ["threeJS", "gui", "particles", "raycaster", "pointsMaterial", "mouseInteraction"],
+        "reason": "A personal practice sketch for learning raycasting against point clouds and building image-reveal effects out of particles instead of textures."
     }
 ]
