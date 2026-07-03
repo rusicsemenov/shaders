@@ -173,7 +173,12 @@ function buildParticles() {
     offscreen.width = s;
     offscreen.height = s;
     const ctx = offscreen.getContext('2d')!;
-    ctx.drawImage(loadedImg, 0, 0, s, s);
+    const scale = Math.min(s / loadedImg.width, s / loadedImg.height);
+    const drawWidth = loadedImg.width * scale;
+    const drawHeight = loadedImg.height * scale;
+    const offsetX = (s - drawWidth) / 2;
+    const offsetY = (s - drawHeight) / 2;
+    ctx.drawImage(loadedImg, offsetX, offsetY, drawWidth, drawHeight);
     const { data } = ctx.getImageData(0, 0, s, s);
 
     const imageCoords: [number, number][] = [];
