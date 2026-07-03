@@ -1,10 +1,18 @@
 import './style.css';
+import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import { ShaderCanvas } from './ShaderCanvas';
 
-// https://gameinspire.com/en
+// https://gameinspire.com/
 
 const documentElement = document.documentElement;
-documentElement.style.setProperty('--bg', `#08060d`);
+
+const params = {
+    background: '#08060d',
+    sphereCount: 3000,
+    gridSize: 100,
+};
+
+documentElement.style.setProperty('--bg', params.background);
 
 const vertexShader = `
     attribute vec3 position;
@@ -105,53 +113,77 @@ const fragmentShader = `
 
 // ─── Sphere (golden ratio distribution) ──────────────────────────────────────
 
-const sphereCount = 3000;
 const sphereR = 0.3;
 const sphereCenterY = 0.2;
-const sphere = new Float32Array(sphereCount * 3);
 
-for (let i = 0; i < sphereCount; i++) {
-    const phi = Math.acos(1 - (2 * i) / sphereCount);
-    const theta = Math.PI * (1 + Math.sqrt(5)) * i;
-    sphere[i * 3] = sphereR * Math.sin(phi) * Math.cos(theta);
-    sphere[i * 3 + 1] = sphereR * Math.sin(phi) * Math.sin(theta) + sphereCenterY;
-    sphere[i * 3 + 2] = sphereR * Math.cos(phi);
+function buildSphere(count: number): Float32Array {
+    const sphere = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+        const phi = Math.acos(1 - (2 * i) / count);
+        const theta = Math.PI * (1 + Math.sqrt(5)) * i;
+        sphere[i * 3] = sphereR * Math.sin(phi) * Math.cos(theta);
+        sphere[i * 3 + 1] = sphereR * Math.sin(phi) * Math.sin(theta) + sphereCenterY;
+        sphere[i * 3 + 2] = sphereR * Math.cos(phi);
+    }
+    return sphere;
 }
 
 // ─── Plane (regular grid) ─────────────────────────────────────────────────────
 
-const gridSize = 100; // 100x100 = 10000 points
 const planeY = -0.5;
 const planeExtent = 1.9;
-const plane = new Float32Array(gridSize * gridSize * 3);
 
-for (let row = 0; row < gridSize; row++) {
-    for (let col = 0; col < gridSize; col++) {
-        const idx = (row * gridSize + col) * 3;
-        plane[idx] = (col / (gridSize - 1)) * 3 * planeExtent - planeExtent * 1.5;
-        plane[idx + 1] = planeY - (row / gridSize) * 0.8; // slight vertical offset to prevent z-fighting
-        plane[idx + 2] = (row / (gridSize - 1)) * 2 * planeExtent - planeExtent;
+function buildPlane(gridSize: number): Float32Array {
+    const plane = new Float32Array(gridSize * gridSize * 3);
+    for (let row = 0; row < gridSize; row++) {
+        for (let col = 0; col < gridSize; col++) {
+            const idx = (row * gridSize + col) * 3;
+            plane[idx] = (col / (gridSize - 1)) * 3 * planeExtent - planeExtent * 1.5;
+            plane[idx + 1] = planeY - (row / gridSize) * 0.8; // slight vertical offset to prevent z-fighting
+            plane[idx + 2] = (row / (gridSize - 1)) * 2 * planeExtent - planeExtent;
+        }
+    }
+    return plane;
+}
+
+// ─── Combine & (re)create the canvas ─────────────────────────────────────────
+
+let canvas: ShaderCanvas | null = null;
+
+function rebuild(): void {
+    const sphere = buildSphere(params.sphereCount);
+    const plane = buildPlane(params.gridSize);
+
+    const particles = new Float32Array(sphere.length + plane.length);
+    particles.set(sphere, 0);
+    particles.set(plane, sphere.length);
+
+    // 0.0 = sphere, 1.0 = plane — one float per point
+    const types = new Float32Array(params.sphereCount + params.gridSize * params.gridSize);
+    types.fill(0, 0, params.sphereCount);
+    types.fill(1, params.sphereCount);
+
+    canvas?.destroy();
+    try {
+        canvas = new ShaderCanvas('#app', {
+            fragmentShader,
+            vertexShader,
+            particles,
+            attributes: { a_type: { data: types, size: 1 } },
+        });
+    } catch (_error) {
+        console.log('WebGL не поддерживается в этом браузере', _error);
     }
 }
 
-// ─── Combine ──────────────────────────────────────────────────────────────────
+rebuild();
 
-const particles = new Float32Array(sphere.length + plane.length);
-particles.set(sphere, 0);
-particles.set(plane, sphere.length);
+// ─── GUI ──────────────────────────────────────────────────────────────────────
 
-// 0.0 = sphere, 1.0 = plane — one float per point
-const types = new Float32Array(sphereCount + gridSize * gridSize);
-types.fill(0, 0, sphereCount);
-types.fill(1, sphereCount);
-
-try {
-    new ShaderCanvas('#app', {
-        fragmentShader,
-        vertexShader,
-        particles,
-        attributes: { a_type: { data: types, size: 1 } },
-    });
-} catch (_error) {
-    console.log('WebGL не поддерживается в этом браузере', _error);
-}
+const gui = new GUI();
+gui.addColor(params, 'background').onChange((v: string) => {
+    documentElement.style.setProperty('--bg', v);
+});
+gui.add(params, 'sphereCount', 0, 8000, 100).name('sphere count').onFinishChange(rebuild);
+gui.add(params, 'gridSize', 2, 200, 1).name('grid size').onFinishChange(rebuild);
+gui.close();
