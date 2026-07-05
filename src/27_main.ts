@@ -52,6 +52,16 @@ const fragmentShader = /*language=GLSL*/ `
             float baseAcross = ropeOffset + bendAmount * cos(ropeAngle); // position (was sin(...bendFreq...))
             float ropeDepth  = sin(ropeAngle);                           // depth, now correlated with position
 
+            // Cull A: the strand-level term can shift totalDepth by at most 0.001,
+            // so ropeDepth*1.5+0.001 is the best this rope could ever score here.
+            // If that can't beat what we already found, skip its strands entirely.
+            float maxPossibleDepth = ropeDepth * 1.5 + 0.001;
+            if (maxPossibleDepth <= bestDepth) continue;
+
+            // Cull B: if this rope's centerline is farther from this pixel than any
+            // strand could reach, none of its strands can cover this pixel either.
+            if (abs(across - baseAcross) > radius + width) continue;
+
             for (int k = 0; k < STRAND_COUNT; k++) {
                 // Spread strands evenly around the circle (2π / N per strand)
                 float phase = float(k) * (6.28318 / float(STRAND_COUNT)) + ropePhase;
