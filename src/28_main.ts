@@ -14,6 +14,12 @@ const fragmentShader = /*language=GLSL*/ `
         return fract(sin(n) * 43758.5453123);
     }
 
+    vec3 hsv2rgb(vec3 c) {
+        vec4 k = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+        vec3 p = abs(fract(c.xxx + k.xyz) * 6.0 - k.www);
+        return c.z * mix(k.xxx, clamp(p - k.xxx, 0.0, 1.0), c.y);
+    }
+
     void main() {
         vec2 p = (gl_FragCoord.xy / iResolution.xy) * 2.0 - 1.0;
         p.x *= iResolution.x / iResolution.y;
@@ -101,21 +107,27 @@ const fragmentShader = /*language=GLSL*/ `
             float fresnel  = pow(edgeFactor, 2.0); // bright toward the curved edge
             float specular = pow(nz, 40.0);        // tight highlight down the center
 
-            vec3 rodBase  = vec3(0.02, 0.022, 0.03); // near-black glass body
-            vec3 rimColor = vec3(0.25, 0.5, 0.95);
+            // Per-rod dynamic color: a random hue per strand that slowly drifts
+            // over time, shared by the rim glow, hot core, and halo.
+            float hue = fract(hash11(fs * 7.13 + 120.0) + iTime * 0.09);
+            vec3 rodColor = hsv2rgb(vec3(hue, 0.6, 1.0));
+            
+//            vec3 rodColor = vec3(0.25, 0.5, 0.95);
+            
+            vec3 rodBase = vec3(0.02, 0.022, 0.03); // near-black glass body
 
             col = mix(col, rodBase, body);
-            col += rimColor * fresnel * body * 0.7;
-            col += vec3(1.0) * specular * body * 0.7;
+            col += rodColor * fresnel * body * 0.9;
+            col += rodColor * specular * body * 0.9;
 
-            // --- Glowing tip: hot core + soft blue halo, gently pulsing ---
+            // --- Glowing tip: hot core + soft halo, gently pulsing ---
             float pulse = 0.008 + 0.005 * sin(iTime * 1.3 + fs * 1.7);
             float tipDist = length(p - bentTip);
             float core = exp(-(tipDist * tipDist) / (0.006 * pulse));
             float halo = exp(-(tipDist * tipDist) / (0.05 * pulse));
 
-            col += vec3(0.85, 0.95, 1.0) * core * 1.4 * depthVis;
-            col += vec3(0.15, 0.55, 1.0) * halo * 0.9 * depthVis;
+            col += mix(vec3(1.0), rodColor, 0.5) * core * 1.4 * depthVis;
+            col += rodColor * halo * 0.9 * depthVis;
         }
 
         // --- Radial fade: the whole scene dims to black away from center ---
