@@ -2,6 +2,18 @@ import './style.css';
 import { ShaderCanvas } from './ShaderCanvas';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 
+const overlay = document.createElement('div');
+
+overlay.innerText = 'Give your site a living background';
+overlay.classList.add('overlay');
+overlay.style.color = 'white';
+overlay.style.textAlign = 'center';
+overlay.style.lineHeight = '1.2';
+overlay.style.letterSpacing = '1.2px';
+overlay.style.maxWidth = '1600px';
+overlay.style.margin = '0 auto';
+document.body.appendChild(overlay);
+
 function hexToRgb(hex: string): [number, number, number] {
     const n = parseInt(hex.slice(1), 16);
     return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
@@ -11,13 +23,18 @@ const params = {
     strandMax: 200,
     strandCount: 100,
     bokehMax: 8,
-    dynamicColor: true,
+    dynamicColor: false,
     rodColor: '#4080f2',
     background: '#0d121c',
-    fadeStart: 0.8,
-    fadeEnd: 1.9,
-    rodWidth: 0.021,
-    scatterRadius: 0.8,
+    fadeStart: 1.8,
+    fadeEnd: 2.9,
+    rodWidth: 0.031,
+    scatterRadius: 1.67,
+    zoom: 0.92,
+    panX: 0.65,
+    panY: 0.24,
+    fresnelIntensity: 0.82,
+    specularIntensity: 3.0,
 };
 
 // STRAND_MAX / BOKEH_MAX are GLSL compile-time loop bounds (GLSL ES 1.00
@@ -37,6 +54,10 @@ function buildFragmentShader(strandMax: number, bokehMax: number): string {
     uniform float uFadeEnd;
     uniform float uRodWidth;
     uniform float uScatterRadius;
+    uniform float uZoom;
+    uniform vec2 uPan;
+    uniform float uFresnelIntensity;
+    uniform float uSpecularIntensity;
 
     const int STRAND_MAX = ${strandMax};
     const int BOKEH_MAX = ${bokehMax};
@@ -55,6 +76,9 @@ function buildFragmentShader(strandMax: number, bokehMax: number): string {
     void main() {
         vec2 p = (gl_FragCoord.xy / iResolution.xy) * 2.0 - 1.0;
         p.x *= iResolution.x / iResolution.y;
+
+        // Camera: zoom > 1 moves in, uPan shifts the view (in world-space units)
+        p = p / uZoom + uPan;
 
         // --- Background: faint blue haze near center, dark toward edges ---
         vec3 bgCenter = uBgColor;
@@ -156,8 +180,8 @@ function buildFragmentShader(strandMax: number, bokehMax: number): string {
             vec3 rodBase = vec3(0.02, 0.022, 0.03); // near-black glass body
 
             col = mix(col, rodBase, body);
-            col += rodColor * fresnel * body * 0.9;
-            col += rodColor * specular * body * 0.9;
+            col += rodColor * fresnel * body * uFresnelIntensity;
+            col += rodColor * specular * body * uSpecularIntensity;
 
             // --- Glowing tip: hot core + soft halo, gently pulsing ---
             float pulse = 0.008 + 0.005 * sin(iTime * 1.3 + fs * 1.7);
@@ -204,6 +228,10 @@ const uniforms = {
     uFadeEnd: { value: params.fadeEnd },
     uRodWidth: { value: params.rodWidth },
     uScatterRadius: { value: params.scatterRadius },
+    uZoom: { value: params.zoom },
+    uPan: { value: [params.panX, params.panY] },
+    uFresnelIntensity: { value: params.fresnelIntensity },
+    uSpecularIntensity: { value: params.specularIntensity },
 };
 
 let shaderCanvas: ShaderCanvas;
@@ -275,4 +303,34 @@ gui.add(params, 'scatterRadius', 0.1, 2, 0.01)
     .name('scatter radius')
     .onChange((v: number) => {
         uniforms.uScatterRadius.value = v;
+    });
+
+gui.add(params, 'zoom', 0.2, 5, 0.01)
+    .name('camera zoom')
+    .onChange((v: number) => {
+        uniforms.uZoom.value = v;
+    });
+
+gui.add(params, 'panX', -1.5, 1.5, 0.01)
+    .name('camera pan x')
+    .onChange((v: number) => {
+        uniforms.uPan.value = [v, params.panY];
+    });
+
+gui.add(params, 'panY', -1.5, 1.5, 0.01)
+    .name('camera pan y')
+    .onChange((v: number) => {
+        uniforms.uPan.value = [params.panX, v];
+    });
+
+gui.add(params, 'fresnelIntensity', 0, 3, 0.01)
+    .name('fresnel intensity')
+    .onChange((v: number) => {
+        uniforms.uFresnelIntensity.value = v;
+    });
+
+gui.add(params, 'specularIntensity', 0, 3, 0.1)
+    .name('specular intensity')
+    .onChange((v: number) => {
+        uniforms.uSpecularIntensity.value = v;
     });
