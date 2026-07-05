@@ -10,12 +10,12 @@ function hexToRgb(hex: string): [number, number, number] {
 const params = {
     strandMax: 200,
     strandCount: 100,
-    bokehMax: 10,
+    bokehMax: 8,
     dynamicColor: true,
     rodColor: '#4080f2',
     background: '#0d121c',
-    fadeStart: 0.2,
-    fadeEnd: 1.4,
+    fadeStart: 0.8,
+    fadeEnd: 1.9,
     rodWidth: 0.021,
     scatterRadius: 0.8,
 };
@@ -40,6 +40,7 @@ function buildFragmentShader(strandMax: number, bokehMax: number): string {
 
     const int STRAND_MAX = ${strandMax};
     const int BOKEH_MAX = ${bokehMax};
+    const int GLINT_MAX = 2;
 
     float hash11(float n) {
         return fract(sin(n) * 43758.5453123);
@@ -96,6 +97,22 @@ function buildFragmentShader(strandMax: number, bokehMax: number): string {
             vec2 tip  = vec2(cos(angle), sin(angle)) * rad; // scattered within a circle around center
             vec2 base = origin;                              // all strands fan from one point
 
+            vec2 segDir = tip - base;
+            float segLen = length(segDir);
+            vec2 dirN = segDir / segLen;
+            vec2 perp = vec2(-dirN.y, dirN.x);
+
+            vec2 rel = p - base;
+            float along = dot(rel, dirN);
+            float t = clamp(along / segLen, 0.0, 1.0);
+
+            // Cheap cull: distance from this pixel to the *unbent* straight rod.
+            // Max bend is 0.3 and rod width tops out well under 0.1, so nothing
+            // farther than that margin could be covered by this strand however
+            // it ends up bending — skip the hashes/pow/exp below entirely.
+            vec2 unbentPoint = base + dirN * (t * segLen);
+            if (length(p - unbentPoint) > 0.5) continue;
+
             // Random pseudo-depth per strand: 0 = far back, 1 = close to camera.
             // Farther strands are thinner and dimmer, giving a fake sense of depth.
             float depth      = hash11(fs * 25.37 + 70.0);
@@ -107,19 +124,11 @@ function buildFragmentShader(strandMax: number, bokehMax: number): string {
             // Bend: each rod leans toward a random side by a random amount,
             // rooted firmly at the base and flexing more toward the tip, with
             // a gentle animated sway layered on top (like wind).
-            vec2 segDir = tip - base;
-            float segLen = length(segDir);
-            vec2 dirN = segDir / segLen;
-            vec2 perp = vec2(-dirN.y, dirN.x);
-
             float bendSign = hash11(fs * 13.7 + 90.0) > 0.5 ? 1.0 : -1.0;
             float bendAmt  = mix(0.05, 0.3, hash11(fs * 31.4 + 100.0));
             float sway     = sin(iTime * 0.5 + fs * 2.3) * bendAmt * 0.35;
             float bendCoeff = bendSign * bendAmt + sway;
 
-            vec2 rel = p - base;
-            float along = dot(rel, dirN);
-            float t = clamp(along / segLen, 0.0, 1.0);
             vec2 bentPoint = base + dirN * (t * segLen) + perp * (bendCoeff * t * t);
             vec2 bentTip   = tip + perp * bendCoeff;
 
@@ -135,7 +144,7 @@ function buildFragmentShader(strandMax: number, bokehMax: number): string {
             float edgeFactor = clamp(d / localRodWidth, 0.0, 1.0); // 0 at center, 1 at edge
             float nz = sqrt(1.0 - edgeFactor * edgeFactor);
 
-            float fresnel  = pow(edgeFactor, 2.0); // bright toward the curved edge
+            float fresnel  = edgeFactor * edgeFactor; // bright toward the curved edge
             float specular = pow(nz, 40.0);        // tight highlight down the center
 
             // Per-rod color: either a random hue per strand that slowly drifts
@@ -153,11 +162,28 @@ function buildFragmentShader(strandMax: number, bokehMax: number): string {
             // --- Glowing tip: hot core + soft halo, gently pulsing ---
             float pulse = 0.008 + 0.005 * sin(iTime * 1.3 + fs * 1.7);
             float tipDist = length(p - bentTip);
-            float core = exp(-(tipDist * tipDist) / (0.006 * pulse));
+            float core = exp(-(tipDist * tipDist) / (0.00176 * pulse));
             float halo = exp(-(tipDist * tipDist) / (0.05 * pulse));
 
-            col += mix(vec3(1.0), rodColor, 0.5) * core * 1.4 * depthVis;
-            col += rodColor * halo * 0.9 * depthVis;
+            col += mix(vec3(1.0), rodColor, 0.9) * core * 2.4 * depthVis;
+            col += rodColor * halo * 0.4 * depthVis;
+
+            // --- Glints: a couple of small bright highlights at random spots
+            // along the rod, each flickering on its own random phase/speed.
+            for (int g = 0; g < GLINT_MAX; g++) {
+                float fg = float(g);
+                float tGlint = hash11(fs * 3.3 + fg * 41.7 + 200.0);
+                vec2 glintPos = base + dirN * (tGlint * segLen) + perp * (bendCoeff * tGlint * tGlint);
+
+                float glintPhase = hash11(fs * 6.1 + fg * 17.3 + 210.0) * 16.28318;
+                float glintSpeed = mix(0.5, 1.5, hash11(fs * 8.3 + fg * 5.1 + 220.0));
+                float twinkle = pow(max(0.0, sin(iTime * glintSpeed + glintPhase)), 8.0);
+
+                float gd = length(p - glintPos);
+                float glint = exp(-(gd * gd) / 0.00001) * twinkle * depthVis;
+
+                col += mix(vec3(1.0), rodColor, 0.3) * glint * 1.2;
+            }
         }
 
         // --- Radial fade: the whole scene dims to black away from center ---
@@ -203,7 +229,7 @@ gui.add(params, 'strandCount', 1, params.strandMax, 1)
         uniforms.uStrandCount.value = v;
     });
 
-gui.add(params, 'bokehMax', 0, 10, 1)
+gui.add(params, 'bokehMax', 0, 20, 1)
     .name('bokeh count (rebuild)')
     .onChange(() => {
         rebuildCanvas();
