@@ -1,6 +1,19 @@
 import './style.css';
 import { ShaderCanvas } from './ShaderCanvas';
 
+const overlay = document.createElement('div');
+
+overlay.innerText = 'Give your site a living background';
+overlay.classList.add('overlay');
+overlay.style.color = 'white';
+overlay.style.textAlign = 'center';
+overlay.style.lineHeight = '1.2';
+overlay.style.letterSpacing = '1.2px';
+overlay.style.mixBlendMode = 'difference';
+overlay.style.maxWidth = '1600px';
+overlay.style.margin = '0 auto';
+document.body.appendChild(overlay);
+
 const fragmentShader = /*language=GLSL*/ `
     precision highp float;
     uniform vec3 iResolution;
@@ -13,7 +26,8 @@ const fragmentShader = /*language=GLSL*/ `
         vec3 col = vec3(0.02, 0.01, 0.035);
 
         // Rotate coordinate system so ribbons flow bottom-left → top-right
-        float angle = 0.52;
+//        float angle = 0.52;
+        float angle = sin(0.52 * p.x + 0.3 * p.y + 0.2 * iTime) * 0.4;
         float ca = cos(angle), sa = sin(angle);
         float along  =  p.x * ca + p.y * sa;  // along ribbon direction
         float across = -p.x * sa + p.y * ca;  // perpendicular (ribbon stack)
