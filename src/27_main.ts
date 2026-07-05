@@ -14,7 +14,7 @@ function hexToRgb(hex: string): [number, number, number] {
 
 const params = {
     background: '#050308',
-    dynamicAngle: true,
+    dynamicAngle: false,
     staticAngle: 0.52,
     bendAmount: 0.17,
     ropeCount: 3,

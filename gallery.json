@@ -88,8 +88,16 @@
         "slug": "livebg-01",
         "animationUrl": "./livebg-01/",
         "thumbnail": "./livebg-01/preview.webp",
-        "description": "Three braided ropes, each built from six strands twisting around a bent centerline, rendered entirely in a fragment shader with no geometry. Every pixel evaluates the strands and keeps only the closest one via a running best-depth comparison, so ropes correctly occlude each other and themselves as they twist. Two cheap analytic culls, a depth bound and a centerline-distance bound, skip whole strand loops per rope when they can't possibly win that pixel, without changing the output. A CSS title overlay sits on top with mix-blend-mode: difference so its color inverts against whatever ribbon color is animating underneath.",
-        "tags": ["rawWebGL", "fragmentShader", "glsl", "depthSorting", "proceduralAnimation", "css"],
+        "description": "Braided ropes, each built from strands twisting around a bent centerline, rendered entirely in a fragment shader with no geometry. Every pixel evaluates the strands and keeps only the closest one via a running best-depth comparison, so ropes correctly occlude each other and themselves as they twist. Two cheap analytic culls, a depth bound and a centerline-distance bound, skip whole strand loops per rope when they can't possibly win that pixel, without changing the output. A GUI panel exposes background color, a dynamic-vs-static camera angle, the rope bend amount, and live rope/strand counts, with the loops capped at compile-time max bounds and broken early to keep the GUI-driven counts within GLSL ES 1.00's constant-loop-bound requirement. A CSS title overlay sits on top with mix-blend-mode: difference so its color inverts against whatever ribbon color is animating underneath.",
+        "tags": [
+            "rawWebGL",
+            "fragmentShader",
+            "glsl",
+            "depthSorting",
+            "proceduralAnimation",
+            "gui",
+            "css"
+        ],
         "reason": "A personal practice sketch for implementing per-pixel depth sorting, a mini painter's algorithm, inside a fragment shader with no real 3D geometry or depth buffer, and for finding cheap analytic bounds to cull work that can't affect the final pixel."
     }
 ]
