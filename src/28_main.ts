@@ -1,14 +1,45 @@
 import './style.css';
 import { ShaderCanvas } from './ShaderCanvas';
+import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 
-const fragmentShader = /*language=GLSL*/ `
+function hexToRgb(hex: string): [number, number, number] {
+    const n = parseInt(hex.slice(1), 16);
+    return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+}
+
+const params = {
+    strandMax: 200,
+    strandCount: 100,
+    bokehMax: 10,
+    dynamicColor: true,
+    rodColor: '#4080f2',
+    background: '#0d121c',
+    fadeStart: 0.2,
+    fadeEnd: 1.4,
+    rodWidth: 0.021,
+    scatterRadius: 0.8,
+};
+
+// STRAND_MAX / BOKEH_MAX are GLSL compile-time loop bounds (GLSL ES 1.00
+// requires constant loop bounds), so changing them rebuilds the shader.
+// STRAND_COUNT just breaks the loop early via a uniform, same as the rope
+// shader's uRopeCount — no rebuild needed for that one.
+function buildFragmentShader(strandMax: number, bokehMax: number): string {
+    return /*language=GLSL*/ `
     precision highp float;
     uniform vec3 iResolution;
     uniform float iTime;
+    uniform float uStrandCount;
+    uniform float uDynamicColor; // > 0.5 = per-rod animated hue, otherwise uRodColor is used
+    uniform vec3 uRodColor;
+    uniform vec3 uBgColor;
+    uniform float uFadeStart;
+    uniform float uFadeEnd;
+    uniform float uRodWidth;
+    uniform float uScatterRadius;
 
-    const int STRAND_MAX = 100;
-    const int STRAND_COUNT = 100;
-    const int BOKEH_MAX = 18;
+    const int STRAND_MAX = ${strandMax};
+    const int BOKEH_MAX = ${bokehMax};
 
     float hash11(float n) {
         return fract(sin(n) * 43758.5453123);
@@ -25,8 +56,8 @@ const fragmentShader = /*language=GLSL*/ `
         p.x *= iResolution.x / iResolution.y;
 
         // --- Background: faint blue haze near center, dark toward edges ---
-        vec3 bgCenter = vec3(0.05, 0.07, 0.11);
-        vec3 bgEdge   = vec3(0.008, 0.008, 0.014);
+        vec3 bgCenter = uBgColor;
+        vec3 bgEdge   = uBgColor * 0.16;
         float distFromCenter = length(p);
         vec3 col = mix(bgCenter, bgEdge, smoothstep(0.0, 1.4, distFromCenter));
 
@@ -52,12 +83,12 @@ const fragmentShader = /*language=GLSL*/ `
         }
 
         // --- Fiberglass strand(s) ---
-        float rodWidth     = 0.021;
-        float scatterRadius = 0.8; // how far tips spread out around the center
-        vec2  origin = vec2(-0.2, -1.7); // shared base point, off the bottom edge
+        float rodWidth     = uRodWidth;
+        float scatterRadius = uScatterRadius; // how far tips spread out around the center
+        vec2  origin = vec2(-0.5, -2.1); // shared base point, off the bottom edge
 
         for (int s = 0; s < STRAND_MAX; s++) {
-            if (s >= STRAND_COUNT) break;
+            if (float(s) >= uStrandCount) break;
 
             float fs = float(s);
             float angle = hash11(fs * 17.13 + 50.0) * 6.28318;
@@ -107,13 +138,12 @@ const fragmentShader = /*language=GLSL*/ `
             float fresnel  = pow(edgeFactor, 2.0); // bright toward the curved edge
             float specular = pow(nz, 40.0);        // tight highlight down the center
 
-            // Per-rod dynamic color: a random hue per strand that slowly drifts
-            // over time, shared by the rim glow, hot core, and halo.
+            // Per-rod color: either a random hue per strand that slowly drifts
+            // over time, or a fixed color — shared by the rim glow, hot core, and halo.
             float hue = fract(hash11(fs * 7.13 + 120.0) + iTime * 0.09);
-            vec3 rodColor = hsv2rgb(vec3(hue, 0.6, 1.0));
-            
-//            vec3 rodColor = vec3(0.25, 0.5, 0.95);
-            
+            vec3 dynamicColor = hsv2rgb(vec3(hue, 0.6, 1.0));
+            vec3 rodColor = mix(uRodColor, dynamicColor, uDynamicColor);
+
             vec3 rodBase = vec3(0.02, 0.022, 0.03); // near-black glass body
 
             col = mix(col, rodBase, body);
@@ -131,11 +161,92 @@ const fragmentShader = /*language=GLSL*/ `
         }
 
         // --- Radial fade: the whole scene dims to black away from center ---
-        float fade = 1.0 - smoothstep(.2, 1.4, distFromCenter);
+        float fade = 1.0 - smoothstep(uFadeStart, uFadeEnd, distFromCenter);
         col *= fade;
 
         gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
     }
 `;
+}
 
-new ShaderCanvas('#app', { fragmentShader });
+const uniforms = {
+    uStrandCount: { value: params.strandCount },
+    uDynamicColor: { value: params.dynamicColor ? 1 : 0 },
+    uRodColor: { value: hexToRgb(params.rodColor) },
+    uBgColor: { value: hexToRgb(params.background) },
+    uFadeStart: { value: params.fadeStart },
+    uFadeEnd: { value: params.fadeEnd },
+    uRodWidth: { value: params.rodWidth },
+    uScatterRadius: { value: params.scatterRadius },
+};
+
+let shaderCanvas: ShaderCanvas;
+
+function createCanvas(): void {
+    const fragmentShader = buildFragmentShader(params.strandMax, params.bokehMax);
+    shaderCanvas = new ShaderCanvas('#app', { fragmentShader, uniforms });
+}
+
+function rebuildCanvas(): void {
+    shaderCanvas.destroy();
+    createCanvas();
+}
+
+createCanvas();
+
+const gui = new GUI();
+gui.close();
+
+gui.add(params, 'strandCount', 1, params.strandMax, 1)
+    .name('strand count')
+    .onChange((v: number) => {
+        uniforms.uStrandCount.value = v;
+    });
+
+gui.add(params, 'bokehMax', 0, 10, 1)
+    .name('bokeh count (rebuild)')
+    .onChange(() => {
+        rebuildCanvas();
+    });
+
+gui.add(params, 'dynamicColor')
+    .name('dynamic color')
+    .onChange((v: boolean) => {
+        uniforms.uDynamicColor.value = v ? 1 : 0;
+    });
+
+gui.addColor(params, 'rodColor')
+    .name('rod color (static)')
+    .onChange((v: string) => {
+        uniforms.uRodColor.value = hexToRgb(v);
+    });
+
+gui.addColor(params, 'background')
+    .name('background color')
+    .onChange((v: string) => {
+        uniforms.uBgColor.value = hexToRgb(v);
+    });
+
+gui.add(params, 'fadeStart', 0, 2, 0.01)
+    .name('fade start radius')
+    .onChange((v: number) => {
+        uniforms.uFadeStart.value = v;
+    });
+
+gui.add(params, 'fadeEnd', 0, 3, 0.01)
+    .name('fade end radius')
+    .onChange((v: number) => {
+        uniforms.uFadeEnd.value = v;
+    });
+
+gui.add(params, 'rodWidth', 0.002, 0.08, 0.001)
+    .name('rod width')
+    .onChange((v: number) => {
+        uniforms.uRodWidth.value = v;
+    });
+
+gui.add(params, 'scatterRadius', 0.1, 2, 0.01)
+    .name('scatter radius')
+    .onChange((v: number) => {
+        uniforms.uScatterRadius.value = v;
+    });
