@@ -2,6 +2,8 @@ import './style.css';
 import { ShaderCanvas } from './ShaderCanvas';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 
+// https://www.epam.com
+
 const overlay = document.createElement('div');
 
 overlay.innerText = 'Give your site a living background';
