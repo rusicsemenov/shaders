@@ -20,6 +20,16 @@
         "reason": "On the N-IX website, was used 512 images in the dom! To make animation more efficient, I created a live background with 1,000 spheres that morph between seven geometric shapes. The background is procedurally generated and animated in real-time."
     },
     {
+        "name": "Fiberglass Light Bundle",
+        "slug": "livebg-02",
+        "animationUrl": "./livebg-02/",
+        "originalUrl": "https://www.epam.com",
+        "thumbnail": "./livebg-02/preview.webp",
+        "description": "A bundle of thin glass rods fans out from a single point below the frame and converges toward tips scattered within a circle around screen center, all rendered procedurally in a fragment shader with no geometry. Each rod gets a random pseudo-depth (thinner and dimmer the farther back it sits), its own random bend direction with a gentle wind-like sway, a glowing tip with a hot core and soft halo, fresnel rim and specular glass shading, and a couple of randomly placed flickering glints. Rod color can cycle per-strand through HSV over time or lock to a single static color. A cheap per-strand cull, checking distance to the unbent straight rod before paying for bend math, hue mixing, or glow falloffs, skips the expensive work for the many strands nowhere near a given pixel. The scene sits on a vignette background with soft drifting bokeh blobs and a radial fade to black at the edges, with a camera zoom/pan uniform layered on top so the whole composition can be reframed. A GUI panel exposes strand and bokeh counts, colors, fade radius, rod width, scatter radius, fresnel/specular intensity, and the camera controls.",
+        "tags": ["rawWebGL", "fragmentShader", "glsl", "proceduralAnimation", "bokeh", "gui"],
+        "reason": "Inspired by a glowing fiber-optic bundle image on EPAM's website (epam.com) — I rebuilt the idea as a live procedural background instead of a static photo, with its own pseudo-3D depth, wind sway, and glass shading."
+    },
+    {
         "name": "Live Background for any Card",
         "slug": "themultiple-bg",
         "animationUrl": "./themultiple-bg/",
@@ -101,30 +111,21 @@
         "reason": "A personal practice sketch for implementing per-pixel depth sorting, a mini painter's algorithm, inside a fragment shader with no real 3D geometry or depth buffer, and for finding cheap analytic bounds to cull work that can't affect the final pixel."
     },
     {
-        "name": "Fiberglass Light Bundle",
-        "slug": "livebg-02",
-        "animationUrl": "./livebg-02/",
-        "originalUrl": "https://www.epam.com",
-        "thumbnail": "./livebg-02/preview.webp",
-        "description": "A bundle of thin glass rods fans out from a single point below the frame and converges toward tips scattered within a circle around screen center, all rendered procedurally in a fragment shader with no geometry. Each rod gets a random pseudo-depth (thinner and dimmer the farther back it sits), its own random bend direction with a gentle wind-like sway, a glowing tip with a hot core and soft halo, fresnel rim and specular glass shading, and a couple of randomly placed flickering glints. Rod color can cycle per-strand through HSV over time or lock to a single static color. A cheap per-strand cull, checking distance to the unbent straight rod before paying for bend math, hue mixing, or glow falloffs, skips the expensive work for the many strands nowhere near a given pixel. The scene sits on a vignette background with soft drifting bokeh blobs and a radial fade to black at the edges, with a camera zoom/pan uniform layered on top so the whole composition can be reframed. A GUI panel exposes strand and bokeh counts, colors, fade radius, rod width, scatter radius, fresnel/specular intensity, and the camera controls.",
-        "tags": [
-            "rawWebGL",
-            "fragmentShader",
-            "glsl",
-            "proceduralAnimation",
-            "bokeh",
-            "gui"
-        ],
-        "reason": "Inspired by a glowing fiber-optic bundle image on EPAM's website (epam.com) — I rebuilt the idea as a live procedural background instead of a static photo, with its own pseudo-3D depth, wind sway, and glass shading."
-    },
-    {
         "name": "Infinite Grid Flyover",
         "slug": "newxel-grid-bg",
         "animationUrl": "./newxel-grid-bg/",
         "originalUrl": "https://newxel.com",
         "thumbnail": "./newxel-grid-bg/preview.webp",
         "description": "An infinite grid floor rendered entirely in a single fragment shader with no geometry — a camera ray is intersected with a horizontal plane, the hit point is scrolled over time to create a continuous forward-flight illusion, and grid lines are drawn and antialiased via fwidth() so they stay crisp from the camera all the way to the horizon. A soft radial corner gradient blends a white background into an accent color, with distance-based fade dissolving the grid into that gradient near the horizon. The mouse position is projected through the same camera ray onto the grid, so the cell under the cursor lights up in a configurable hover color as you move. A GUI panel exposes speed, cell size, camera height/tilt, line width/color, hover color, fade rate, and background color.",
-        "tags": ["rawWebGL", "fragmentShader", "glsl", "gui", "background", "gradient", "mouseInteraction"],
+        "tags": [
+            "rawWebGL",
+            "fragmentShader",
+            "glsl",
+            "gui",
+            "background",
+            "gradient",
+            "mouseInteraction"
+        ],
         "reason": "Inspired by the perspective grid hero background on newxel.com — recreated as a live procedural shader instead of a static image, so it can fly forward endlessly."
     }
 ]
