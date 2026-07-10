@@ -55,6 +55,9 @@ class ShaderCanvas {
         if (!gl) throw new Error('ShaderCanvas: WebGL not supported in this browser');
         this.gl = gl;
 
+        // Needed for fwidth()-based antialiasing in fragment shaders (e.g. grid lines).
+        gl.getExtension('OES_standard_derivatives');
+
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
@@ -163,7 +166,12 @@ class ShaderCanvas {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        this.loadedTextures.set(name, { texture, unit, width: canvas.width, height: canvas.height });
+        this.loadedTextures.set(name, {
+            texture,
+            unit,
+            width: canvas.width,
+            height: canvas.height,
+        });
     }
 
     private cacheUniform(name: string): void {
