@@ -123,8 +123,8 @@
         "animationUrl": "./newxel-grid-bg/",
         "originalUrl": "https://newxel.com",
         "thumbnail": "./newxel-grid-bg/preview.webp",
-        "description": "An infinite grid floor rendered entirely in a single fragment shader with no geometry — a camera ray is intersected with a horizontal plane, the hit point is scrolled over time to create a continuous forward-flight illusion, and grid lines are drawn and antialiased via fwidth() so they stay crisp from the camera all the way to the horizon. A soft radial corner gradient blends a white background into an accent color, with distance-based fade dissolving the grid into that gradient near the horizon. A GUI panel exposes speed, cell size, camera height/tilt, line width/color, fade rate, and background color.",
-        "tags": ["rawWebGL", "fragmentShader", "glsl", "gui", "background", "gradient"],
+        "description": "An infinite grid floor rendered entirely in a single fragment shader with no geometry — a camera ray is intersected with a horizontal plane, the hit point is scrolled over time to create a continuous forward-flight illusion, and grid lines are drawn and antialiased via fwidth() so they stay crisp from the camera all the way to the horizon. A soft radial corner gradient blends a white background into an accent color, with distance-based fade dissolving the grid into that gradient near the horizon. The mouse position is projected through the same camera ray onto the grid, so the cell under the cursor lights up in a configurable hover color as you move. A GUI panel exposes speed, cell size, camera height/tilt, line width/color, hover color, fade rate, and background color.",
+        "tags": ["rawWebGL", "fragmentShader", "glsl", "gui", "background", "gradient", "mouseInteraction"],
         "reason": "Inspired by the perspective grid hero background on newxel.com — recreated as a live procedural shader instead of a static image, so it can fly forward endlessly."
     }
 ]

@@ -9,6 +9,7 @@ const documentElement = document.documentElement;
 const params = {
     background: '#ffffff',
     lineColor: '#2929d9',
+    hoverColor: '#2626ed',
 };
 
 const overlay = document.createElement('div');
@@ -44,6 +45,8 @@ const fragmentShader = /*language=GLSL*/ `
     uniform float iFadeRate;
     uniform vec3 iLineColor;
     uniform vec3 iBaseColor;
+    uniform vec2 iMouse;
+    uniform vec3 iHoverColor;
 
 //    vec3 edgeColor = vec3(0.161, 0.161, 0.851);
     vec3 edgeColor = iLineColor;
@@ -59,6 +62,17 @@ const fragmentShader = /*language=GLSL*/ `
         vec3 up      = cross(forward, right);
         vec3 rd      = normalize(forward + uv.x * right + uv.y * up);
         vec3 camPos  = vec3(0.0, iCameraHeight, 0.0);
+
+        // ── mouse ray: which grid cell is the cursor hovering? ──────────────
+        vec3 mouseRd = normalize(forward + iMouse.x * right + iMouse.y * up);
+        vec2 hoveredCell = vec2(1e6);
+        if (mouseRd.y < -0.01) {
+            float mt = -camPos.y / mouseRd.y;
+            vec3 mouseHit = camPos + mouseRd * mt;
+            vec2 mouseCoord = mouseHit.xz / iCellSize;
+            mouseCoord.y += iTime * iSpeed / iCellSize;
+            hoveredCell = floor(mouseCoord);
+        }
 
         // ── corner gradient: white center fading to edgeColor at the edges ──
         vec2 orUV = uv + 1.0;
@@ -78,8 +92,12 @@ const fragmentShader = /*language=GLSL*/ `
             vec2 lineAA = smoothstep(vec2(0.0), aa, distToLine);
             float gridLine = 1.0 - min(lineAA.x, lineAA.y);
 
+            vec2 cell = floor(coord);
+            float isHovered = step(abs(cell.x - hoveredCell.x) + abs(cell.y - hoveredCell.y), 0.5);
+
             float fade = exp(-t * iFadeRate);
             vec3 floorCol = mix(col, iLineColor, gridLine);
+            floorCol = mix(floorCol, iHoverColor, isHovered);
             col = mix(col, floorCol, fade);
         }
 
@@ -96,7 +114,19 @@ const uniforms = {
     iFadeRate: { value: 0.2 },
     iLineColor: { value: hexToVec3(params.lineColor) },
     iBaseColor: { value: hexToVec3(params.background) },
+    iMouse: { value: [1e6, 1e6] },
+    iHoverColor: { value: hexToVec3(params.hoverColor) },
 };
+
+window.addEventListener('mousemove', (e) => {
+    uniforms.iMouse.value = [
+        (2 * e.clientX - window.innerWidth) / window.innerHeight,
+        (window.innerHeight - 2 * e.clientY) / window.innerHeight,
+    ];
+});
+window.addEventListener('mouseleave', () => {
+    uniforms.iMouse.value = [1e6, 1e6];
+});
 
 try {
     new ShaderCanvas('#app', { fragmentShader, uniforms });
@@ -116,6 +146,11 @@ gui.addColor(params, 'lineColor')
     .onChange((v: string) => {
         documentElement.style.setProperty('--lineColor', v);
         uniforms.iLineColor.value = hexToVec3(v);
+    });
+gui.addColor(params, 'hoverColor')
+    .name('hover color')
+    .onChange((v: string) => {
+        uniforms.iHoverColor.value = hexToVec3(v);
     });
 gui.add(uniforms.iSpeed, 'value', 0.1, 5, 0.1).name('speed');
 gui.add(uniforms.iCellSize, 'value', 0.5, 5, 0.05).name('cell size');
