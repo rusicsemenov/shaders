@@ -41,6 +41,14 @@ body {
     height: 100%;
 }
 
+.bg-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100dvw;
+    height: 100dvh;
+    display: block;
+}
+
 .overlay {
     position: fixed;
     inset: 0;
