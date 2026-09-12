@@ -205,6 +205,7 @@ const settings = {
     pointLight3: true,
     circle: false,
     floor: false,
+    bgMesh: true,
 };
 
 const stored = localStorage.getItem('shaderSettings');
@@ -220,6 +221,8 @@ if (stored) {
 }
 
 gui.onChange(() => localStorage.setItem('shaderSettings', JSON.stringify(settings)));
+
+bgMesh.visible = settings.bgMesh;
 
 function applyMaterialGroup(
     label: string,
@@ -359,7 +362,9 @@ const circle = new THREE.Mesh(geometry, material);
 circle.visible = settings.circle;
 scene.add(circle);
 
-const reflector = new Reflector(new THREE.PlaneGeometry(50, 50), {
+const floorGeometry = new THREE.PlaneGeometry(20, 20);
+
+const reflector = new Reflector(floorGeometry, {
     textureWidth: window.innerWidth * window.devicePixelRatio,
     textureHeight: window.innerHeight * window.devicePixelRatio,
     color: 0x889999,
@@ -368,7 +373,6 @@ reflector.rotation.x = -Math.PI / 2;
 reflector.position.set(-1, -0.01, -1);
 scene.add(reflector);
 
-const floorGeometry = new THREE.PlaneGeometry(50, 50);
 const floor = new THREE.Mesh(floorGeometry);
 floor.rotation.x = -Math.PI / 2;
 floor.visible = settings.floor;
@@ -395,6 +399,9 @@ lightsFolder.add(settings, 'pointLight3').onChange((v: boolean) => {
 const sceneFolder = gui.addFolder('Scene');
 sceneFolder.add(settings, 'circle').onChange((v: boolean) => {
     circle.visible = v;
+});
+sceneFolder.add(settings, 'bgMesh').onChange((v: boolean) => {
+    bgMesh.visible = v;
 });
 sceneFolder.add(settings, 'floor').onChange((v: boolean) => {
     floor.visible = v;
