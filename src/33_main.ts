@@ -4,6 +4,8 @@ import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Reflector } from 'three/addons/objects/Reflector.js';
 
+// https://onlymonster.ai
+
 const scene = new THREE.Scene();
 const gui = new GUI();
 
@@ -286,17 +288,13 @@ function applyMaterialGroup(
 
 let mixer: THREE.AnimationMixer | undefined;
 
-loader.load('/onlymonster-dance.glb', (gltf: GLTF) => {
-    console.log(gltf);
-
+loader.load('./onlymonster-dance.glb', (gltf: GLTF) => {
     torus = gltf.scene.getObjectByName('Armature') as THREE.Mesh;
     brows = gltf.scene.getObjectByName('brows') as THREE.Mesh;
     body = gltf.scene.getObjectByName('body') as THREE.Mesh;
     head = gltf.scene.getObjectByName('head') as THREE.Mesh;
     tail = gltf.scene.getObjectByName('tail') as THREE.Mesh;
     t_shirt = gltf.scene.getObjectByName('T-shirt') as THREE.Mesh;
-
-    console.log(brows);
 
     if (!torus) {
         console.error('THREE.Torus not found.');

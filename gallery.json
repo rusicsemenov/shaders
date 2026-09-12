@@ -137,5 +137,23 @@
         "description": "A cluster of up to 150 lines converges toward a point near the top-right corner and fans out down the page, drawn on a 2D canvas with no WebGL. Each line samples the same drifting value-noise field along y, offset per line so neighbors stay correlated but trace distinct paths, with a sine envelope that pins both endpoints in place and lets only the body of the line sway. Spacing, stroke width, and opacity all taper from the near edge to the far edge, and every segment is stroked as a quadratic curve for a smooth, cable-like look. A GUI panel exposes line count, cluster position, spacing, width, sway amplitude, noise scale, drift speed, and colors.",
         "tags": ["canvas2D", "proceduralAnimation", "valueNoise", "gui", "background"],
         "reason": "Inspired by the hero background on spd.tech — rebuilt as a live procedural line field instead of a static image, animated with drifting value noise on a plain 2D canvas."
+    },
+    {
+        "name": "OnlyMonster Glass Character",
+        "slug": "onlymonster",
+        "animationUrl": "./onlymonster/",
+        "originalUrl": "https://onlymonster.ai",
+        "thumbnail": "./onlymonster/preview.webp",
+        "description": "An animated glass-material character (GLTF model with skeletal dance animation) rendered with MeshPhysicalMaterial transmission, tuned independently per body part (body, brows, t-shirt) via a shared GUI-folder-building helper. Stands on a glass floor with a live planar Reflector mirroring the scene underneath, soft PCF shadows cast from a directional light, and orbit controls for free camera movement.",
+        "tags": [
+            "threeJS",
+            "gui",
+            "gltf",
+            "physicalMaterial",
+            "reflections",
+            "shadows",
+            "orbitControls"
+        ],
+        "reason": "Built for onlymonster.ai to explore real-time glass/transmission material tuning per body part alongside planar mirror reflections and shadow mapping."
     }
 ]
